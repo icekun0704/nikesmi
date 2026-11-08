@@ -765,6 +765,7 @@ def parse_trigger(text, slot, ct):
         (r'^フルチャージ攻撃が適正射程距離内の対象に命中した時', {'kind': 'fullChargeShot'}),
         (r'^最後の弾丸.*フルチャージ攻撃が命中した時', {'kind': 'lastBullet'}),
         (r'^ターゲットが出現', {'kind': 'never'}),
+        (r'^デコイが存在する時' + NUM + r'秒ごとに', None, 'periodic'),
         (r'^デコイが存在する時', {'kind': 'never'}),
         (r'^コアに' + NUM + r'回命中した時', {'kind': 'never'}),
         (r'^対象のパーツに命中した時', {'kind': 'never'}),
@@ -875,7 +876,10 @@ def parse_skill(infos, slot, ct, treasure):
             trigger['nth'] = int(m0.group(1))
         # 条件が「、」より前に無い書き方（例: 対象が気絶状態→…なら同一の敵に）を
         # 条件なし扱いにしてしまうと、開幕に大ダメージが飛ぶ。必ず条件付きにする。
-        if hdr and not trig_text and re.search(r'(なら|時|場合|のみ|状態)', hdr):
+        # 「自分のHPが◯%以上」は発動条件であって、トリガーではない。
+        if trigger.get('kind') in ('selfHpAbove', 'selfHpBelow'):
+            trigger = {'kind': 'always', 'conditions': [dict(trigger)]}
+        if hdr and not trig_text and trigger.get('kind') in ('always', 'burst')                 and re.search(r'(なら|時|場合|のみ|状態)', hdr):
             # 「自分のHPが90%以上の時のみ味方全体に」のように、
             # 条件と対象が続けて書かれているものは常時発動＋条件として扱う。
             lead = re.match(r'^自分のHPが' + NUM + r'%[以上以下]', hdr)
