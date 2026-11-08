@@ -66,14 +66,22 @@ uniq.forEach((m) => {
   m.defender_team.forEach((i) => { games[Number(i)] = (games[Number(i)] || 0) + 1; });
 });
 
+/* 出現回数が少ないキャラは極端な値に振れるので 0 方向へ縮める。
+ *   r' = r × n / (n + K)
+ * K=40 で、40試合のキャラは半分、400試合なら 91% が残る。 */
+const SHRINK_K = 40;
+
 const out = {
   generatedFrom: inputs.map((f) => path.basename(f)),
   matches: uniq.length,
   scale: 4,
+  shrinkK: SHRINK_K,
   ratings: {},
 };
 for (const i of Object.keys(r)) {
-  out.ratings[i] = { r: Math.round(r[i] * 1000) / 1000, n: games[i] || 0 };
+  const n = games[i] || 0;
+  const shrunk = n > 0 ? (r[i] * n) / (n + SHRINK_K) : 0;
+  out.ratings[i] = { r: Math.round(shrunk * 1000) / 1000, n: n };
 }
 
 fs.writeFileSync(outPath, 'window.RATINGS = ' + JSON.stringify(out) + ';\n');
@@ -85,6 +93,12 @@ for (const m of uniq) {
   const sb = m.defender_team.reduce((s, i) => s + (r[Number(i)] || 0), 0);
   if ((sa > sb ? 'A' : 'B') === (m.winner_is_attacker ? 'A' : 'B')) ok++;
 }
+let okS = 0;
+for (const m of uniq) {
+  const sa = m.attacker_team.reduce((s, i) => s + out.ratings[Number(i)].r, 0);
+  const sb = m.defender_team.reduce((s, i) => s + out.ratings[Number(i)].r, 0);
+  if ((sa > sb ? 'A' : 'B') === (m.winner_is_attacker ? 'A' : 'B')) okS++;
+}
 console.log('matches', uniq.length, 'characters', Object.keys(r).length,
-  'accuracy', (100 * ok / uniq.length).toFixed(1) + '%');
+  'accuracy', (100 * ok / uniq.length).toFixed(1) + '% (shrunk', (100 * okS / uniq.length).toFixed(1) + '%)');
 console.log('wrote', outPath);
