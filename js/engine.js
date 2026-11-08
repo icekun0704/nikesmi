@@ -360,9 +360,14 @@ window.Engine = (function () {
     return sorted;
   }
 
-  function resolveTargets(u, spec, team, enemies, rng) {
+  function resolveTargets(u, spec, team, enemies, rng, frame) {
     var pool;
     if (spec.side === 'self') return [u];
+    if (spec.sel === 'primary') {
+      // 「対象に」= そのとき通常攻撃で狙っている相手
+      var pt = pickTarget(u, enemies, frame);
+      return pt ? [pt] : [];
+    }
     if (spec.side === 'enemy') pool = alive(enemies);
     else pool = alive(team);
 
@@ -491,7 +496,7 @@ window.Engine = (function () {
 
   function fireSkillBlock(u, sk, state, blockState, team, enemies, frame, ctx) {
     var b = blockState.block;
-    var targets = resolveTargets(u, b.target, team, enemies, ctx.rng);
+    var targets = resolveTargets(u, b.target, team, enemies, ctx.rng, frame);
     if (!targets.length && b.target.side !== 'self') return;
     for (var i = 0; i < b.effects.length; i++) {
       applyEffect(u, b.effects[i], targets, team, enemies, frame,

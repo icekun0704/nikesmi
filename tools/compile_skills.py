@@ -132,15 +132,43 @@ def strip_markup(x):
     return x
 
 
+def is_header_line(s):
+    """Lines that start a new block rather than continue the previous effect."""
+    if HEADER_PREFIX.match(s):
+        return True
+    if s.endswith('：') or s.endswith(':'):
+        return True
+    return (s.endswith('に') or s.endswith('、')) and '%' not in s and not re.search(
+        r'(ダメージ|回復|維持|▲|▼|解除|無敵|挑発|気絶)', s)
+
+
 def split_lines(note):
-    """Return [(text, treasure_only)] for one note entry (dict or str)."""
+    """Return [(text, treasure_only)] for one note entry (dict or str).
+
+    The game wraps one effect across several <br> segments; joining them back
+    keeps lines like the Dorothy burst's 8900.83% text intact, which used to be
+    dropped entirely.
+    """
     raw = note.get('note', '') if isinstance(note, dict) else note
     m = TREASURE_RE.match(raw.strip())
     treasure_only = bool(m)
     text = strip_markup(raw)
-    return [(ln.strip(), treasure_only) for ln in text.split('\n') if ln.strip()]
+    out = []
+    for ln in text.split(chr(10)):
+        line = ln.strip()
+        if not line:
+            continue
+        if line.startswith('・'):
+            out.append([line, treasure_only])
+            continue
+        if out and out[-1][0].startswith('・') and not is_header_line(line):
+            out[-1][0] += line
+        else:
+            out.append([line, treasure_only])
+    return [(t, tr) for t, tr in out]
 
 
+HEADER_PREFIX = re.compile(r'^(?:効果\d+|追加効果\d*|\d+回目|\d+段階|第\d+)[：:]')
 NUM = r'(\d+(?:\.\d+)?)'
 
 # --------------------------------------------------------------------------
@@ -210,6 +238,14 @@ STACK_RE = re.compile(r'：(\d+)スタック')
 LIMIT_RE = re.compile(r'戦闘中(\d+)回発動')
 PCT_RE = re.compile(NUM + r'\s*%\s*([▲▼])')
 TREASURE_ARROW_RE = re.compile(NUM + r'%→' + NUM + r'%')
+
+
+META_EOF = re.compile(
+    r'段階別|下位効果|スタック適用|使用回数別|開始回数別|攻撃回数別|のみ適用'
+    r'|^機能|^効果\d+：機能|^保存|^臨戦|再発動周期|^バニーモード|^ペルソナ|^ステージパート'
+    r'|スタック量|スタックコピー|警戒対象指定|命中部位'
+)
+META_TAIL = re.compile(r'(?:解除不可|解除)$')
 
 
 def parse_effect(text, treasure):
@@ -529,6 +565,8 @@ def parse_effect(text, treasure):
         base = float(m.group(2)) if treasure and m.group(2) else float(m.group(1))
         return {'op': 'damage', 'value': base, 'type': classify_damage_type(line), 'raw': line}
 
+    if META_EOF.search(line) or META_TAIL.search(line):
+        return {'op': 'meta', 'raw': line}
     return {'op': 'unparsed', 'raw': line}
 
 
@@ -624,6 +662,10 @@ def parse_target(header):
     cm = re.search(r'(火力型|防御型|支援型)の', t)
     if cm:
         cls = cm.group(1)
+
+    if side is None and '対象' in t:
+        side = 'enemy'
+        sel = 'primary'
 
     return {
         'side': side,
