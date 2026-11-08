@@ -7,11 +7,18 @@
  * 置き方:
  *   1. Cloudflare のダッシュボード → Workers & Pages → Create → Worker
  *   2. このファイルの中身をそのまま貼り付けて Deploy
- *   3. 発行された https://xxxx.yyyy.workers.dev を
+ *   3. Worker の Settings → Variables で BLABLINK_COOKIE を Secret として追加し、
+ *      自分のブラウザの blablalink.com の Cookie を入れる
+ *   4. 発行された https://xxxx.yyyy.workers.dev を
  *      js/config.js の window.SYNC_PROXY に書く
  *
- * 中継するのは「公開プロフィールの読み取り」だけで、Cookie は扱わない。
- * 送られてくるのは openid（プロフィールURLに含まれる公開ID）だけ。
+ * これで、アプリには URL を貼るだけで同期できる。
+ *
+ * 重要な注意:
+ *   blablalink のゲームAPIは、Cookie がないと必ず "game not login" を返す。
+ *   つまり「URLを貼るだけ」を成立させるには、誰かがログイン状態を持つしかない。
+ *   この Worker はあなた自身の Cookie を Secret に置くので、他人には渡らない。
+ *   第三者が運営する中継サービスには Cookie を渡さないこと。
  */
 
 const ALLOWED = [
@@ -29,7 +36,7 @@ const CORS = {
 };
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS });
     }
@@ -48,16 +55,19 @@ export default {
     let payload = {};
     try { payload = await request.json(); } catch (e) { /* empty */ }
 
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Channel-Type': '2',
+      'X-Language': 'ja',
+      'X-Common-Params': payload.common || '{}',
+      'Origin': 'https://www.blablalink.com',
+      'Referer': 'https://www.blablalink.com/'
+    };
+    if (env.BLABLINK_COOKIE) headers['Cookie'] = env.BLABLINK_COOKIE;
+
     const upstream = await fetch('https://api.blablalink.com' + path, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Channel-Type': '2',
-        'X-Language': 'ja',
-        'X-Common-Params': payload.common || '{}',
-        'Origin': 'https://www.blablalink.com',
-        'Referer': 'https://www.blablalink.com/'
-      },
+      headers: headers,
       body: JSON.stringify(payload.body || {})
     });
 

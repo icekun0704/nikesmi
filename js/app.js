@@ -333,12 +333,27 @@
       syncEditSeg();
       renderBoard('A'); renderBoard('B');
     });
+    if (entry) {
+      slot.draggable = true;
+      slot.addEventListener('dragstart', function (ev) {
+        ev.dataTransfer.setData('text/plain', 'slot:' + side + ':' + index);
+        ev.dataTransfer.effectAllowed = 'move';
+        slot.style.opacity = '.45';
+      });
+      slot.addEventListener('dragend', function () { slot.style.opacity = ''; });
+    }
     slot.addEventListener('dragover', function (ev) { ev.preventDefault(); slot.classList.add('dragover'); });
     slot.addEventListener('dragleave', function () { slot.classList.remove('dragover'); });
     slot.addEventListener('drop', function (ev) {
       ev.preventDefault();
       slot.classList.remove('dragover');
-      var id = parseInt(ev.dataTransfer.getData('text/plain'), 10);
+      var data = ev.dataTransfer.getData('text/plain') || '';
+      if (data.indexOf('slot:') === 0) {
+        var parts = data.split(':');
+        moveSlot(parts[1], parseInt(parts[2], 10), side, index);
+        return;
+      }
+      var id = parseInt(data, 10);
       if (id) placeCharAt(side, index, id);
     });
 
@@ -346,6 +361,19 @@
   }
 
   /* --------------------------------------------------------------- placing */
+  function moveSlot(fromSide, fromIndex, toSide, toIndex) {
+    if (fromSide === toSide && fromIndex === toIndex) return;
+    var moving = store.teams[fromSide][fromIndex];
+    if (!moving) return;
+    var target = store.teams[toSide][toIndex];
+    store.teams[toSide][toIndex] = moving;
+    store.teams[fromSide][fromIndex] = target || null;
+    store.selected = { side: toSide, index: toIndex };
+    persist();
+    renderAll();
+    scheduleSim();
+  }
+
   function firstEmpty(side) {
     for (var i = 0; i < 5; i++) if (!store.teams[side][i]) return i;
     return -1;
@@ -764,7 +792,12 @@
       evs.push({ frame: b.frame, kind: 'burst', side: b.side, text: b.name + ' ' + b.stage });
     });
     store.sample.events.forEach(function (e) {
-      if (e.kind === 'death') evs.push({ frame: e.frame, kind: 'death', side: e.side, text: e.unit + ' 撃破' });
+      if (e.kind === 'death') {
+        evs.push({
+          frame: e.frame, kind: 'death', side: e.side,
+          text: (e.killer ? e.killer + ' ▸ ' : '') + e.unit + ' 撃破'
+        });
+      }
       else if (e.kind === 'timeout') evs.push({ frame: e.frame, kind: 'fb', side: 'A', text: '時間切れ' });
     });
     evs.sort(function (a, b) { return a.frame - b.frame; });
@@ -862,10 +895,12 @@
 
     if (store.expanded) {
       var iconsH = 38;
-      var teamH = Math.max(58, (h - padT - padB - iconsH) * 0.34);
+      var gaugeH = 30;
+      var teamH = Math.max(50, (h - padT - padB - iconsH - gaugeH) * 0.34);
       drawTeamCurves(g, xOf, padL, padT, plotW, teamH, win);
       drawBurstIcons(g, xOf, padL, padT + teamH + 2, plotW, iconsH);
-      var lanesTop = padT + teamH + iconsH + 6;
+      drawGauge(g, xOf, padL, padT + teamH + iconsH + 2, plotW, gaugeH, win);
+      var lanesTop = padT + teamH + iconsH + gaugeH + 10;
       var laneH = (h - padB - lanesTop) / 10;
       drawLanes(g, xOf, padL, lanesTop, plotW, laneH, win);
     } else {
@@ -873,12 +908,74 @@
       drawBurstTicks(g, xOf, padL, h - padB - 8, plotW);
     }
 
+    // バーストした瞬間に縦線を引く
+    g.save();
+    g.beginPath();
+    g.rect(padL, padT, plotW, h - padT - padB);
+    g.clip();
+    store.sample.bursts.forEach(function (b) {
+      var bx = xOf(b.frame);
+      if (bx < padL || bx > w - padR) return;
+      var col = b.side === 'A' ? 'rgba(61,219,180,' : 'rgba(247,162,76,';
+      g.strokeStyle = col + (b.stage === 'B3' ? '.75)' : '.45)');
+      g.lineWidth = b.stage === 'B3' ? 2 : 1.4;
+      g.beginPath();
+      g.moveTo(bx, padT);
+      g.lineTo(bx, h - padB);
+      g.stroke();
+      g.fillStyle = col + '.85)';
+      g.font = '9px system-ui, sans-serif';
+      g.textAlign = 'center';
+      g.fillText(b.stage.replace('B', ''), bx, padT + 9);
+    });
+    g.restore();
+
     var px = xOf(store.frame);
     if (px >= padL && px <= w - padR) {
       g.strokeStyle = 'rgba(255,255,255,.72)';
       g.lineWidth = 1;
       g.beginPath(); g.moveTo(px, padT); g.lineTo(px, h - padB); g.stroke();
     }
+  }
+
+  function gaugeAt(series, frame) {
+    if (!series || !series.length) return 0;
+    for (var i = 1; i < series.length; i++) {
+      if (series[i][0] >= frame) return series[i][1];
+    }
+    return series[series.length - 1][1];
+  }
+
+  function drawGauge(g, xOf, x0, y0, w, h, win) {
+    var s = store.sample;
+    if (!s.gauge) return;
+    var rowH = Math.max(6, (h - 4) / 2);
+    ['A', 'B'].forEach(function (side, idx) {
+      var series = s.gauge[side];
+      var color = side === 'A' ? '#3ddbb4' : '#f7a24c';
+      var baseY = y0 + idx * (rowH + 4);
+      g.fillStyle = 'rgba(255,255,255,.05)';
+      g.fillRect(x0, baseY, w, rowH);
+      g.fillStyle = color + '99';
+      var last = x0;
+      var n = s.frames || 1;
+      for (var f = 0; f <= n; f += 2) {
+        var v = Math.max(0, Math.min(100, gaugeAt(series, f))) / 100;
+        var x1 = xOf(f);
+        if (x1 > last) {
+          g.fillRect(last, baseY + rowH * (1 - v), x1 - last, rowH * v);
+          last = x1;
+        }
+      }
+      g.fillStyle = color;
+      g.font = '9px system-ui, sans-serif';
+      g.textAlign = 'left';
+      g.fillStyle = color;
+      g.font = '9px system-ui, sans-serif';
+      g.textAlign = 'left';
+      var cur = Math.round(gaugeAt(series, store.frame));
+      g.fillText((side === 'A' ? '自' : '相') + ' ゲージ ' + cur + '%', x0 + 3, baseY - 2);
+    });
   }
 
   function drawTeamCurves(g, xOf, x0, y0, w, h, win) {

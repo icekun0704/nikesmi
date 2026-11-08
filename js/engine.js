@@ -281,7 +281,7 @@ window.Engine = (function () {
 
     target.hp -= remaining;
     target.damageTaken += remaining;
-    if (source) source.damageDealt += remaining;
+    if (source) { source.damageDealt += remaining; target.lastHitBy = source; }
 
     if (source && source.lifestealPct > 0) {
       heal(source, source.lifestealPct / 100 * remaining, frame);
@@ -657,9 +657,9 @@ window.Engine = (function () {
 
     var state = {
       A: { gauge: 0, chain: [], chainIndex: 0, fullBurstUntil: -1, fullBurst: false,
-           chainFrame: 0, blocked: false, fullAt: -1 },
+           chainFrame: 0, blocked: false, fullAt: -1, gaugeSeries: [[0, 0]] },
       B: { gauge: 0, chain: [], chainIndex: 0, fullBurstUntil: -1, fullBurst: false,
-           chainFrame: 0, blocked: false, fullAt: -1 }
+           chainFrame: 0, blocked: false, fullAt: -1, gaugeSeries: [[0, 0]] }
     };
     var events = [];
     var bursts = [];
@@ -862,7 +862,13 @@ window.Engine = (function () {
             } else {
               u.alive = false;
               u.deathFrame = frame;
-              events.push({ frame: frame, kind: 'death', side: u.side, unit: u.name, pos: u.pos });
+              var killer = u.lastHitBy;
+              events.push({
+                frame: frame, kind: 'death', side: u.side, unit: u.name, pos: u.pos,
+                killer: killer ? killer.name : null,
+                killerSide: killer ? killer.side : null,
+                killerPos: killer ? killer.pos : null
+              });
               var foes = u.side === 'A' ? B : A;
               foes.forEach(function (m) {
                 if (m.alive) runTriggered(m, foes, u.side === 'A' ? A : B, frame, ctx, 'enemyDeath');
@@ -871,6 +877,9 @@ window.Engine = (function () {
           }
         });
       });
+
+      state.A.gaugeSeries.push([frame, state.A.gauge]);
+      state.B.gaugeSeries.push([frame, state.B.gauge]);
 
       // タイムライン用の記録（値が動いたフレームだけ残す）
       [A, B].forEach(function (team) {
@@ -912,6 +921,7 @@ window.Engine = (function () {
     return {
       winner: winner,
       frames: frame,
+      gauge: { A: state.A.gaugeSeries, B: state.B.gaugeSeries },
       teams: { A: A, B: B },
       events: events,
       bursts: bursts,

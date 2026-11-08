@@ -440,12 +440,23 @@ window.SyncUI = (function () {
   function open() {
     var body = document.querySelector('#syncBody');
     body.innerHTML = [
-      '<h3>先に結論</h3>',
-      '<p><b>URLを貼るだけの同期はできません。</b> BlablaLink のゲームAPIは、' +
-      'URLに含まれるIDだけでは応答せず、ログイン中のセッションCookieを要求します（実際に叩くと <code>game not login</code> が返ります）。' +
+      '<h3>2通りあります</h3>',
+      '<p><b>① 中継サーバーを使う（1回だけ設定 → 以後はURLを貼るだけ）</b><br>' +
+      '同梱の <code>tools/cloudflare-worker.js</code> を Cloudflare Workers に置き、' +
+      '自分のBlablaLinkのCookieを Secret（<code>BLABLINK_COOKIE</code>）として登録します。' +
+      'そのURLを <code>js/config.js</code> の <code>SYNC_PROXY</code> に書けば、' +
+      '以後は下の欄にURLを貼るだけで取り込めます。Cookieは自分のWorkerの中だけに置かれます。</p>',
+      '<p><b>② ブックマークレットを使う（設定不要）</b><br>' +
+      'BlablaLinkのページ上で動かすので、Cookieはブラウザの外に出ません。下に手順があります。</p>',
+      '<p style="font-size:11.5px;color:var(--fg-3)">なぜ中継が要るのか：BlablaLinkのゲームAPIは、' +
+      'URLに含まれるIDだけでは応答せず、ログイン中のCookieを要求します（実際に叩くと <code>game not login</code> が返ります）。' +
       'Cookieは他のサイトから使えない決まりなので、静的サイトから直接取りに行く方法はありません。</p>',
-      '<p>いちばん安全なのは、<b>BlablaLinkのページ上で動くブックマークレット</b>です。' +
-      'Cookieはブラウザの外に出ません。</p>',
+      '<h3>URLで取り込む（中継サーバー設定済みの場合）</h3>',
+      '<div style="display:flex;gap:8px;margin:10px 0">',
+      '<input id="syncUrl" type="text" placeholder="https://www.blablalink.com/user?openid=..." ',
+      'style="flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:8px 11px;outline:none">',
+      '<button id="syncGo" class="tbtn-ghost" style="white-space:nowrap">取り込む</button></div>',
+      '<p id="syncStatus" style="color:var(--fg-3);font-size:12px">待機中…</p>',
       '<h3>手順</h3>',
       '<ol style="padding-left:20px;line-height:2">',
       '<li><button class="tbtn-ghost" id="openBL">BlablaLink を開く</button> でログインする</li>',
@@ -465,6 +476,20 @@ window.SyncUI = (function () {
     ].join('\n');
 
     document.querySelector('#bmk').href = window.Sync.bookmarkletHref;
+
+    var input = document.querySelector('#syncUrl');
+    if (input) {
+      try { input.value = localStorage.getItem('nikesmi.syncUrl') || ''; } catch (e) { }
+      document.querySelector('#syncGo').onclick = function () {
+        var url = input.value.trim();
+        if (!url) { status('URLを入れてください'); return; }
+        try { localStorage.setItem('nikesmi.syncUrl', url); } catch (e) { }
+        status('取得中…');
+        window.SyncFetch.fetchByUrl(url).then(importPayload).catch(function (e) {
+          status('失敗: ' + (e && e.message ? e.message : e));
+        });
+      };
+    }
 
     document.querySelector('#openBL').onclick = function () {
       popup = window.open('https://www.blablalink.com/user', 'blablalink_sync', 'width=1100,height=820');
