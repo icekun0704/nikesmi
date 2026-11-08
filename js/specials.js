@@ -1201,6 +1201,57 @@ window.SPECIALS = window.SPECIALS || {};
   };
 })();
 
+/* ---- 112.js ---- */
+/* ラプンツェル：ピュアグレイス (id 112 / org 136)
+ *
+ * 原文のうちパーサで表現できていない部分。
+ *
+ *  スキル1: フルチャージ状態を1秒以上維持した場合、自分がバリア適用状態の時に限り、
+ *          味方全体に「スキル発動者の最終最大HPの20.59%の共用バリア」（持続）
+ *  スキル2: 同じ条件で、自分に「バリアHP回復3.16%（1秒間隔・持続）」
+ *
+ * 「共用バリア」はチームで1本のプールという説と各員に同額という説があり、
+ * 原文からは決められない。ここでは各員に同額を配る（攻撃を受けた人数ぶん
+ * 減る）という素直な解釈にしている。
+ */
+(function () {
+  var CHARGE_HOLD = 60;      // 1秒
+  var SHIELD_PCT = 20.59;    // 発動者の最終最大HP比
+  var HEAL_PCT = 3.16;       // 1秒ごと
+
+  (window.SPECIALS = window.SPECIALS || {})[112] = {
+    init: function (u, E) {
+      u.rpg = { chargeTicks: 0, lastTick: -1 };
+    },
+
+    tick: function (u, E, frame) {
+      var st = u.rpg;
+      var charging = u.firing.nextFrame - frame > 1;
+
+      if (!charging) { st.chargeTicks = 0; return; }
+      st.chargeTicks += 1;
+
+      if (st.chargeTicks < CHARGE_HOLD) return;
+      if (u.shield <= 0) return;              // バリア適用状態のときだけ
+      if (frame - st.lastTick < 60) return;   // 1秒間隔
+      st.lastTick = frame;
+
+      // 味方全体に共用バリア
+      var team = E.team(u);
+      var amount = u.hpMax * SHIELD_PCT / 100;
+      for (var i = 0; i < team.length; i++) {
+        var a = team[i];
+        if (!a.alive) continue;
+        if (a.shield < amount) a.shield = amount;
+      }
+
+      // 自分にバリアHP回復（1秒ごと）
+      E.heal(u, 0, frame);                    // 何もしない（HP回復ではない）
+      u.shield = Math.min(u.hpMax * 0.5, u.shield + u.hpMax * HEAL_PCT / 100);
+    }
+  };
+})();
+
 /* ---- 114.js ---- */
 /* ウンファ：タクティカル・アップ (114 / org 164)
  *
@@ -10426,6 +10477,54 @@ window.SPECIALS = window.SPECIALS || {};
       if (!u.arc) return;
       // 運命の輪のカード（10秒間維持）
       u.arc.fate = true;
+    }
+  };
+})();
+
+/* ---- 32.js ---- */
+/* A2 (id 32 / org 76)
+ *
+ * バーストの「Bモード」。
+ *   ・1秒ごとに自分のHPが減少する代わりに、攻撃力とチャージ速度が増加
+ *   ・自分のHPが40%以下ならBモード解除
+ *
+ * 数値はパース済みのものを使う（攻撃力15.19%▲ / チャージ速度35.88%▲ /
+ * HP減少3.99%毎秒）。パーサはこのブロックの発動条件を読めず unknown に
+ * しているため、エンジンからは発火しない。ここで補う。
+ */
+(function () {
+  var ATK = 15.19;
+  var CHARGE_SPEED = 35.88;
+  var DRAIN_PCT = 3.99;     // 毎秒、最大HP比
+  var END_HP_RATIO = 0.40;
+
+  (window.SPECIALS = window.SPECIALS || {})[32] = {
+    init: function (u, E) { u.a2 = { active: false, lastDrain: -1 }; },
+
+    onBurst: function (u, E, frame) {
+      u.a2.active = true;
+      u.a2.lastDrain = frame;
+    },
+
+    tick: function (u, E, frame) {
+      var st = u.a2;
+      if (!st.active) return;
+
+      if (u.hp / u.hpMax <= END_HP_RATIO) {
+        // Bモード解除。次のフレームでバフが切れるよう、更新を止めるだけ。
+        st.active = false;
+        return;
+      }
+
+      // バフは毎フレーム延長して維持する
+      E.buff(u, 'a2-atk', 'atkPct', ATK, 'up', frame + 2);
+      E.buff(u, 'a2-cs', 'chargeSpeedPct', CHARGE_SPEED, 'up', frame + 2);
+
+      // 1秒ごとにHPが減る
+      if (frame - st.lastDrain >= E.FPS) {
+        st.lastDrain = frame;
+        u.hp = Math.max(1, u.hp - u.hpMax * DRAIN_PCT / 100);
+      }
     }
   };
 })();

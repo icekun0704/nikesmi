@@ -399,6 +399,15 @@ def parse_effect(text, treasure):
             out['duration'] = float(dur.group(1))
         return out
 
+    # ---- Trina-style conditional burst-damage buff -----------------------
+    m = re.search(r'スキル対象の説明部分が『(.+?)』で終わるバーストスキルダメージ' + NUM + r'%▲', line)
+    if m:
+        out = {'op': 'stat', 'stat': 'burstDmgPct', 'value': float(m.group(2)),
+               'dir': 'up', 'basis': 'self', 'onlyIfBurstTargets': m.group(1), 'raw': line}
+        dur = DURATION_RE.search(line)
+        out['duration'] = float(dur.group(1)) if dur else None
+        return out
+
     # ---- generic "STAT N%▲/▼ : duration" --------------------------------
     # strip a leading label like "効果2：" / "3回目：" / "ラクカジャ："
     body = line
@@ -464,15 +473,6 @@ def parse_effect(text, treasure):
         if key is None:
             out['op'] = 'unparsed'
             out['key_missing'] = name
-        return out
-
-    # ---- Trina-style conditional burst-damage buff -----------------------
-    m = re.search(r'スキル対象の説明部分が『(.+?)』で終わるバーストスキルダメージ' + NUM + r'%▲', line)
-    if m:
-        out = {'op': 'stat', 'stat': 'burstDmgPct', 'value': float(m.group(2)),
-               'dir': 'up', 'basis': 'self', 'onlyIfBurstTargets': m.group(1), 'raw': line}
-        dur = DURATION_RE.search(line)
-        out['duration'] = float(dur.group(1)) if dur else None
         return out
 
     # ---- heal over time ---------------------------------------------------
