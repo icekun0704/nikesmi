@@ -1090,9 +1090,11 @@
     scrub.addEventListener('input', function () {
       store.playing = false;
       $('#playBtn').textContent = '▶';
-      var max = store.sample ? store.sample.frames : 0;
-      store.frame = Math.round(scrub.value / 1000 * max);
-      if (store.frame > max) store.frame = max;
+      // 拡大しているときは、スライダーは「見えている範囲」を動く。
+      // 全体を映しているときだけ試合全体を動かす。
+      var w = timeWindow();
+      var f = Math.round(w.start + (scrub.value / 1000) * (w.end - w.start));
+      store.frame = Math.max(0, Math.min(store.sample ? store.sample.frames : 0, f));
       drawTimeline(); renderBoard('A'); renderBoard('B'); updateReadout();
     });
   }
@@ -1128,9 +1130,11 @@
     var f = Math.round(store.frame);
     $('#rdT').textContent = (f / 60).toFixed(2);
     $('#rdF').textContent = f;
-    var max = store.sample ? store.sample.frames : 1;
     var scrub = $('#scrub');
-    if (document.activeElement !== scrub) scrub.value = Math.max(0, Math.min(1000, f / Math.max(1, max) * 1000));
+    if (document.activeElement === scrub) return;
+    var w = timeWindow();
+    var span = Math.max(1, w.end - w.start);
+    scrub.value = Math.max(0, Math.min(1000, (f - w.start) / span * 1000));
   }
 
   /* ------------------------------------------------------------------ stage */
@@ -1138,6 +1142,7 @@
     store.zoom = Math.max(1, Math.min(20, z));
     $('#zoomLabel').textContent = store.zoom.toFixed(1) + '×';
     drawTimeline();
+    updateReadout();
   }
 
   function setupStage() {
@@ -1173,6 +1178,7 @@
       store.pan = maxT - visible > 0 ? start / (maxT - visible) : 0;
       $('#zoomLabel').textContent = store.zoom.toFixed(1) + '×';
       drawTimeline();
+      updateReadout();
     }, { passive: false });
 
     var dragging = false;
