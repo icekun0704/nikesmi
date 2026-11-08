@@ -451,6 +451,19 @@ window.Engine = (function () {
     switch (effect.op) {
       case 'stat': {
         if (!effect.stat) return;
+        // 「スキル対象の説明部分が『敵全体に』で終わるバーストスキル」限定の効果
+        if (effect.onlyIfBurstTargets) {
+          targets = targets.filter(function (t) {
+            var sk = t.skills && t.skills.burst;
+            if (!sk) return false;
+            for (var bi = 0; bi < sk.blocks.length; bi++) {
+              var tg = sk.blocks[bi].target || {};
+              if (tg.side === 'enemy' && tg.sel === 'all') return true;
+            }
+            return false;
+          });
+          if (!targets.length) return;
+        }
         var stat = effect.stat;
         if (stat === 'bulletCharge' || stat === 'pelletPct') return;
         for (var i = 0; i < targets.length; i++) {

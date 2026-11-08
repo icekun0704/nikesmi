@@ -85,10 +85,14 @@ def main():
     print('完全に解析済み  %d (%.0f%%)' % (clean, 100.0 * clean / max(1, forms)))
     print('固有スキル実装  %d キャラ' % len(specials))
     print('未着手          %d 形態' % len(missing_chars))
-    print('')
     missing_chars.sort(key=lambda r: -(r[1] * 3 + r[2]))
-    for name, bad, unk in missing_chars[:15]:
-        print('  %-24s 未解釈 %2d / 不明 %2d' % (name, bad, unk))
+    out = []
+    for name, bad, unk in missing_chars:
+        out.append('  %-24s 未解釈 %2d / 不明 %2d' % (name, bad, unk))
+    io.open(os.path.join(APP, '_report.txt'), 'w', encoding='utf-8').write(chr(10).join(out))
+    print('')
+    for line in out[:15]:
+        print(line)
 
 
 if __name__ == '__main__':
