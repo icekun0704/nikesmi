@@ -742,7 +742,8 @@ def parse_trigger(text, slot, ct):
         (r'^最大弾数のリロードが完了した時', {'kind': 'reload'}),
         (r'^フルチャージした時', {'kind': 'fullChargeShot'}),
         (r'^フルチャージではない通常攻撃を' + NUM + r'回行った時', None, 'attackShots'),
-        (r'^フルバーストタイム中、' + NUM + r'秒ごとに', None, 'periodic'),
+        (r'^フルバーストタイム(?:発動)?中、' + NUM + r'秒ごとに', None, 'periodic'),
+        (r'^自分が狙撃モードでなければコアが活性化している', {'kind': 'never'}),
         (r'^フルバーストタイム中のみ、' + NUM + r'秒ごとに', None, 'periodic'),
         (r'^フルチャージ攻撃(?:が)?命中した時', {'kind': 'fullChargeShot'}),
         (r'^フルチャージ攻撃で' + NUM + r'回攻撃した時', None, 'fullChargeN'),
@@ -858,7 +859,13 @@ def parse_skill(infos, slot, ct, treasure):
             ({'side': 'self', 'sel': 'all', 'pick': None, 'count': None,
               'excludeSelf': False, 'weapon': None, 'element': None, 'classType': None}),
             '')
-        trigger = parse_trigger(trig_text if hdr else '', slot, ct)
+        trigger = parse_trigger((trig_text or hdr) if hdr else '', slot, ct)
+        # 対象句の手前で切れた条件（「フルバーストタイム発動中、」など）は、
+        # ヘッダ全体でもう一度試す。
+        if hdr and trigger.get('kind') == 'always':
+            alt = parse_trigger(hdr, slot, ct)
+            if alt.get('kind') != 'always':
+                trigger = alt
         # 「3回:」「6回:」のような発動回数の指定は、対象句より前に置かれる
         m0 = re.match(r'^(\d+)回[：:]', hdr)
         if m0 and trigger.get('kind') not in ('burst', 'periodic'):
