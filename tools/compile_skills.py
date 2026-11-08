@@ -843,6 +843,7 @@ def parse_skill(infos, slot, ct, treasure):
     blocks = []
     header = []
     effects = []
+    last_trigger = [None]
 
     def flush():
         if not header and not effects:
@@ -856,7 +857,20 @@ def parse_skill(infos, slot, ct, treasure):
         # 条件が「、」より前に無い書き方（例: 対象が気絶状態→…なら同一の敵に）を
         # 条件なし扱いにしてしまうと、開幕に大ダメージが飛ぶ。必ず条件付きにする。
         if hdr and not trig_text and re.search(r'(なら|時|場合|のみ|状態)', hdr):
-            trigger = {'kind': 'unknown', 'text': hdr}
+            # 「自分のHPが90%以上の時のみ味方全体に」のように、
+            # 条件と対象が続けて書かれているものは常時発動＋条件として扱う。
+            lead = re.match(r'^自分のHPが' + NUM + r'%[以上以下]', hdr)
+            if lead:
+                trigger = {'kind': 'always'}
+            else:
+                trigger = {'kind': 'unknown', 'text': hdr}
+
+        # 「自分に」「味方全体に」だけの行は、直前の条件を引き継ぐ。
+        # 例: 「フルバーストタイムが発動した時、敵全体に」→「自分に」
+        if trigger.get('kind') == 'always' and last_trigger[0] is not None                 and hdr and re.fullmatch(r'[^、]{1,20}に', hdr)                 and not re.search(r'(時|なら|場合|のみ|状態)', hdr):
+            trigger = dict(last_trigger[0])
+        elif trigger.get('kind') not in ('always', 'battleStart', 'unknown', 'periodic'):
+            last_trigger[0] = dict(trigger)
         conds = parse_condition(hdr)
         if conds:
             trigger.setdefault('conditions', []).extend(conds)
