@@ -440,61 +440,22 @@ window.SyncUI = (function () {
   function open() {
     var body = document.querySelector('#syncBody');
     body.innerHTML = [
-      '<h3>2通りあります</h3>',
-      '<p><b>① 中継サーバーを使う（1回だけ設定 → 以後はURLを貼るだけ）</b><br>' +
-      '同梱の <code>tools/cloudflare-worker.js</code> を Cloudflare Workers に置き、' +
-      '自分のBlablaLinkのCookieを Secret（<code>BLABLINK_COOKIE</code>）として登録します。' +
-      'そのURLを <code>js/config.js</code> の <code>SYNC_PROXY</code> に書けば、' +
-      '以後は下の欄にURLを貼るだけで取り込めます。Cookieは自分のWorkerの中だけに置かれます。</p>',
-      '<p><b>② ブックマークレットを使う（設定不要）</b><br>' +
-      'BlablaLinkのページ上で動かすので、Cookieはブラウザの外に出ません。下に手順があります。</p>',
-      '<p style="font-size:11.5px;color:var(--fg-3)">なぜ中継が要るのか：BlablaLinkのゲームAPIは、' +
-      'URLに含まれるIDだけでは応答せず、ログイン中のCookieを要求します（実際に叩くと <code>game not login</code> が返ります）。' +
-      'Cookieは他のサイトから使えない決まりなので、静的サイトから直接取りに行く方法はありません。</p>',
-      '<h3>URLで取り込む（中継サーバー設定済みの場合）</h3>',
-      '<div style="display:flex;gap:8px;margin:10px 0">',
-      '<input id="syncUrl" type="text" placeholder="https://www.blablalink.com/user?openid=..." ',
-      'style="flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:8px 11px;outline:none">',
-      '<button id="syncGo" class="tbtn-ghost" style="white-space:nowrap">取り込む</button></div>',
-      '<p id="syncStatus" style="color:var(--fg-3);font-size:12px">待機中…</p>',
+      '<p>BlablaLink と連携すると、所持ニケと育成状況を取り込めます。取り込んだ内容はブラウザの中だけに保存され、どこにも送られません。</p>',
       '<h3>手順</h3>',
-      '<ol style="padding-left:20px;line-height:2">',
-      '<li><button class="tbtn-ghost" id="openBL">BlablaLink を開く</button> でログインする</li>',
-      '<li>下のボタンをブックマークバーへドラッグする（初回だけ。Ctrl+Shift+B でバーが出ます）' +
-      '<br><a class="bmk" id="bmk" href="#" onclick="return false" ' +
-      'style="display:inline-block;margin-top:6px;background:var(--self);color:#04140f;text-decoration:none;padding:6px 16px;border-radius:4px;font-weight:700;font-size:12px;cursor:grab">NIKESMI 同期</a></li>',
-      '<li>BlablaLink のタブで、そのブックマークを押す</li>',
+      '<ol>',
+      '<li>「BlablaLink を開く」を押して、ログインします</li>',
+      '<li>下の「NIKESMI 同期」を、ブックマークバーへドラッグします（初回だけ。Ctrl+Shift+B でバーが出ます）' +
+      '<br><a class="bmk" id="bmk" href="#" onclick="return false">NIKESMI 同期</a></li>',
+      '<li>開いた BlablaLink の画面で、いま登録したブックマークを押します</li>',
       '</ol>',
-      '<p id="syncStatus" style="color:var(--fg-3);font-size:12px">待機中…</p>',
-      '<h3>うまくいかない環境では</h3>',
-      '<div id="dropzone" style="border:1px dashed var(--line);border-radius:5px;padding:16px;text-align:center;color:var(--fg-3);cursor:pointer">' +
-      '同期用JSONをドロップ / クリックで選択<input type="file" id="syncFile" accept="application/json,.json" hidden></div>',
-      '<h3>上級者向け</h3>',
-      '<p style="font-size:12px;color:var(--fg-3)">自前の中継サーバーを立てる場合は <code>tools/cloudflare-worker.js</code> を Cloudflare Workers に置き、' +
-      'そのURLを <code>js/config.js</code> の <code>SYNC_PROXY</code> に書けば、URLを貼るだけで取り込めます。' +
-      'ただし中継サーバーにはあなたのCookieを渡すことになるため、自分で立てたもの以外は使わないでください。</p>'
-    ].join('\n');
-
+      '<p id="syncStatus">待機中…</p>',
+      '<h3>ブックマークが使えないとき</h3>',
+      '<p>同期用のファイルをここにドロップしてください。</p>',
+      '<div id="dropzone">ここにドロップ、またはクリックして選択' +
+      '<input type="file" id="syncFile" accept="application/json,.json" hidden></div>'
+    ].join('');
     document.querySelector('#bmk').href = window.Sync.bookmarkletHref;
-
-    var input = document.querySelector('#syncUrl');
-    if (input) {
-      try { input.value = localStorage.getItem('nikesmi.syncUrl') || ''; } catch (e) { }
-      document.querySelector('#syncGo').onclick = function () {
-        var url = input.value.trim();
-        if (!url) { status('URLを入れてください'); return; }
-        try { localStorage.setItem('nikesmi.syncUrl', url); } catch (e) { }
-        status('取得中…');
-        window.SyncFetch.fetchByUrl(url).then(importPayload).catch(function (e) {
-          status('失敗: ' + (e && e.message ? e.message : e));
-        });
-      };
-    }
-
-    document.querySelector('#openBL').onclick = function () {
-      popup = window.open('https://www.blablalink.com/user', 'blablalink_sync', 'width=1100,height=820');
-      if (!popup) status('ポップアップがブロックされました');
-    };
+    document.querySelector('#openBL') && (document.querySelector('#openBL').onclick = null);
 
     var zone = document.querySelector('#dropzone');
     var file = document.querySelector('#syncFile');

@@ -4764,6 +4764,47 @@ window.SPECIALS = window.SPECIALS || {};
   }
 })();
 
+/* ---- 166.js ---- */
+/* モダニア (id 166 / org 78)
+ *
+ * バーストの殲滅モード。
+ *   ・装弾数無限：15秒
+ *   ・殲滅モード：照準範囲内のすべての敵を同時に照準（15秒）
+ *
+ * 通常攻撃は1体にしか当たらないので、モード中は残り全員にも同じ武器倍率で
+ * 追加ダメージを与えて「全員に当たっている」状態にする。
+ */
+(function () {
+  (window.SPECIALS = window.SPECIALS || {})[166] = {
+    init: function (u, E) { u.modernia = { until: -1, baseMagazine: u.firing.magazine }; },
+
+    onBurst: function (u, E, frame) {
+      u.modernia.until = frame + 15 * E.FPS;
+      u.firing.magazine = Infinity;
+      u.firing.shotsInMagazine = 0;
+    },
+
+    tick: function (u, E, frame) {
+      var st = u.modernia;
+      if (st.until > 0 && frame > st.until) {
+        st.until = -1;
+        u.firing.magazine = st.baseMagazine;
+        u.firing.shotsInMagazine = 0;
+      }
+    },
+
+    onShot: function (u, E, frame) {
+      if (u.modernia.until < frame) return;
+      var mult = (u.char.stats && u.char.stats.weaponDamage) || 5.57;
+      var es = E.alive(E.enemies(u));
+      for (var i = 0; i < es.length; i++) {
+        if (es[i] === u._lastTarget) continue;
+        E.damage(u, es[i], frame, { multiplierPct: mult });
+      }
+    }
+  };
+})();
+
 /* ---- 167.js ---- */
 /* アリス (167 / org 74)
  *
@@ -9535,6 +9576,36 @@ window.SPECIALS = window.SPECIALS || {};
     }
   }
 };
+
+/* ---- 231.js ---- */
+/* 紅蓮：神殺 (id 231 / org 206)
+ *
+ * スキル1の「居合」。戦闘開始時から、
+ * 通常攻撃のたびに照準線に最も近い敵1機へ 最終攻撃力の109% の追加ダメージ。
+ * これはパーサでは battleStart の1回きりになってしまうので、ここで毎回にする。
+ *
+ * スキル2の「居合の追加ダメージ倍率が100%効果量に対し増加」は
+ * バースト後、居合の倍率を +100% する（109% → 209%）。
+ */
+(function () {
+  var IAI = 109;          // 通常時の居合ダメージ（%）
+  var IAI_BOOST = 100;    // バースト後の上乗せ（%）
+
+  (window.SPECIALS = window.SPECIALS || {})[231] = {
+    init: function (u, E) { u.scarletG = { boosted: false }; },
+
+    onBurst: function (u, E, frame) {
+      u.scarletG.boosted = true;
+    },
+
+    onShot: function (u, E, frame) {
+      var t = E.pickTarget(u, frame);
+      if (!t) return;
+      var mult = IAI + (u.scarletG.boosted ? IAI_BOOST : 0);
+      E.damage(u, t, frame, { multiplierPct: mult });
+    }
+  };
+})();
 
 /* ---- 232.js ---- */
 /* ラプンツェル：サンクチュアリ (id 232 / org 205, RL / B2 / 支援型 / 灼熱) — 宝物なし

@@ -745,7 +745,12 @@ window.Engine = (function () {
       team: function (u) { return u.side === 'A' ? A : B; },
       enemies: function (u) { return u.side === 'A' ? B : A; },
       alive: alive,
-      pickTarget: pickTarget,
+      /* 呼び方の揺れを吸収する: pickTarget(u, frame) でも
+       * pickTarget(u, enemies, frame) でも動く。 */
+      pickTarget: function (u, a, b) {
+        if (Array.isArray(a)) return pickTarget(u, a, b == null ? u.now : b);
+        return pickTarget(u, u.side === 'A' ? B : A, a);
+      },
       slotsInRange: slotsInRange,
       damage: function (u, t, fr, o) {
         return dealDamage(u, t, fr, Object.assign({
@@ -952,6 +957,7 @@ window.Engine = (function () {
           }
 
           var primary = pickTarget(u, enemies, frame);
+          u._lastTarget = primary;
           if (primary) {
             var weaponMult = (u.char.stats && u.char.stats.weaponDamage) || 10;
             var chargeMult = (u.weapon === 'RL' || u.weapon === 'SR')
