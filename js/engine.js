@@ -214,6 +214,13 @@ window.Engine = (function () {
       }
     }
 
+    /* スノーホワイト：ヘビーアームズ（id 3）.— チャージ中にロックオンと
+     * オートファイア装填を貯め、フルチャージ時にまとめて撃ち込む。 */
+    if (char.id === 3) {
+      u.swha = { locks: [], rounds: 0, maxLocks: 5, maxRounds: 5,
+                 fullActive: 0, tick: 0 };
+    }
+
     u.skills = (window.SKILL_DB && window.SKILL_DB[u.skillKey]) || null;
     if (u.skills) {
       ['skill1', 'skill2', 'burst'].forEach(function (slot) {
@@ -639,6 +646,12 @@ window.Engine = (function () {
   /* ---------------------------------------------------------------- combat */
   function fireBurst(u, team, enemies, frame, ctx) {
     u.bursts += 1;
+    if (u.swha) {
+      u.swha.fullActive = 2;
+      u.swha.maxLocks = 10;
+      u.swha.maxRounds = 10;
+      buff(u, 'swha-full', 'chargeDmgPct', 528, 'up', frame + 60 * FPS, {});
+    }
     runTriggered(u, team, enemies, frame, ctx, 'burst');
     var ct = u.skillState[2] ? u.skillState[2].ct : 20;
     u.burstReadyAt = frame + (ct > 0 ? ct : 20) * FPS;
@@ -821,6 +834,42 @@ window.Engine = (function () {
         });
       });
 
+      // ---- スノーホワイト：ヘビーアームズのロックオン／装填
+      [A, B].forEach(function (team) {
+        var enemies = team === A ? B : A;
+        team.forEach(function (u) {
+          if (!u.alive || !u.swha) return;
+          u.now = frame;
+          var st = u.swha;
+          // 射撃の合間（＝チャージ中）だけ貯まる。0.2秒 = 12フレームごと。
+          if (u.firing.nextFrame - frame > 1) {
+            st.tick += 1;
+            if (st.tick % 12 === 0) {
+              if (st.rounds < st.maxRounds) st.rounds += 1;
+              if (st.locks.length < st.maxLocks) {
+                var pool = alive(enemies).filter(function (e) {
+                  return st.locks.indexOf(e) < 0;
+                });
+                if (pool.length) {
+                  // 照準線に最も近い＝編成の左
+                  pool.sort(function (a, b) { return a.pos - b.pos; });
+                  var lock = pool[0];
+                  st.locks.push(lock);
+                  // ロックオン中の敵は受けるダメージ +4.2%（4秒）
+                  buff(lock, 'swha-lock:' + u.pos + ':' + lock.pos, 'takenDmgPct',
+                    4.2, 'up', frame + 4 * FPS, {});
+                }
+              }
+              if (st.rounds > 0) {
+                buff(u, 'swha-def', 'defPct', 42.24, 'up', frame + 2 * FPS, {});
+              }
+            }
+          } else {
+            st.tick = 0;
+          }
+        });
+      });
+
       // ---- normal shots
       [A, B].forEach(function (team) {
         var enemies = team === A ? B : A;
@@ -875,6 +924,35 @@ window.Engine = (function () {
 
             // hit counters on the target side
             primary.counters.hitsTaken += shot.hits;
+          }
+
+          // オートファイア: 装填数ぶん、ロックオン対象と全体に撃ち込む
+          if (u.swha && u.swha.rounds > 0) {
+            var st2 = u.swha;
+            var r = st2.rounds;
+            var locked = st2.locks.filter(function (e) { return e.alive; });
+            for (var ri = 0; ri < r; ri++) {
+              var tgt = locked.length ? locked[ri % locked.length] : null;
+              if (tgt) {
+                dealDamage(u, tgt, frame, {
+                  multiplierPct: 105.59, chargeMult: null, rng: rng,
+                  scale: scale, teamA: state.A, teamB: state.B,
+                  bonusPct: st2.fullActive > 0 ? 158.4 : 0
+                });
+              }
+              alive(enemies).forEach(function (e) {
+                dealDamage(u, e, frame, {
+                  multiplierPct: 41.9, chargeMult: null, rng: rng,
+                  scale: scale, teamA: state.A, teamB: state.B
+                });
+              });
+            }
+            st2.rounds = 0;
+            st2.locks = [];
+            if (st2.fullActive > 0) {
+              st2.fullActive -= 1;
+              if (st2.fullActive <= 0) { st2.maxLocks = 5; st2.maxRounds = 5; }
+            }
           }
 
           if (shot.reloaded) runTriggered(u, team, enemies, frame, ctx, 'lastBullet');
