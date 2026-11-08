@@ -19,6 +19,8 @@ function powerBloodStacks(u) {
 }
 
 (window.SPECIALS = window.SPECIALS || {})[50] = {
+  /* 血の魔人フルスタック時の1584%はここで実装している（パーサ側は条件を見ない） */
+  suppress: { burst: [1] },
   init: function (u, E) {
     var src = window.SKILL_DB && window.SKILL_DB[u.skillKey];
     if (src) {
