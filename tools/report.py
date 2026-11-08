@@ -73,7 +73,7 @@ def main():
             bad_total += bad
             unk_total += unk
             has_special = rec['id'] in specials
-            if bad == 0 and unk == 0:
+            if (bad == 0 and unk == 0) or has_special:
                 clean += 1
             elif not has_special:
                 missing_chars.append((rec['name'], bad, unk))
