@@ -757,6 +757,8 @@ def parse_trigger(text, slot, ct):
         (r'^ペレットごとのクリティカル攻撃が' + NUM + r'回命中した時', None, 'critHits'),
         (r'^通常攻撃が' + NUM + r'回クリティカル命中した時', None, 'critHits'),
         (r'^味方が消費した弾の合計が' + NUM + r'発ごとに', None, 'ammoConsumed'),
+        (r'^フルチャージ状態を\d+秒以上維持して' + NUM + r'回攻撃した時', None, 'fullChargeN'),
+        (r'^フルチャージ攻撃が適正射程距離内の対象に命中した時', {'kind': 'fullChargeShot'}),
         (r'^最後の弾丸.*フルチャージ攻撃が命中した時', {'kind': 'lastBullet'}),
         (r'^ターゲットが出現', {'kind': 'never'}),
         (r'^デコイが存在する時', {'kind': 'never'}),
