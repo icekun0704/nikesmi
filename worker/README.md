@@ -27,6 +27,11 @@ npx wrangler login
 
 ブラウザが開くので、Cloudflare にログインして許可します。
 
+> セキュリティソフトが通信を検査している環境では、Node が証明書を信じられず
+> `UNABLE_TO_VERIFY_LEAF_SIGNATURE` で止まることがあります。その場合は
+> `NODE_OPTIONS=--use-system-ca` を付けてください（Windows の証明書ストアを使います）。
+> 証明書の検証を切る必要はありません。
+
 ### 2. Cookie を入れる
 
 PC のブラウザで <https://www.blablalink.com> を開き、ログインします。次に F12 を押して
@@ -74,6 +79,13 @@ npx wrangler kv namespace create SESSIONS
 ```
 
 表示された `id` を `wrangler.toml` の `[[kv_namespaces]]` に書き、コメントを外してから `npx wrangler deploy`。
+
+## Cookie を中継サーバーに置かない場合
+
+中継サーバーに Cookie を持たせたくない場合は、ニケシミュ側の
+`アカウント同期` → `同期サーバー` に Cookie を入れてください。
+この場合 Cookie はそのブラウザの中だけに保存され、問い合わせのたびに
+中継サーバーがそのまま転送します（サーバー側には残しません）。
 
 ## 注意
 
