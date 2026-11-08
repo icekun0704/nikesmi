@@ -295,7 +295,7 @@ window.Engine = (function () {
       if (group.length > 1) {
         var each = amount / group.length;
         var total = 0;
-        for (var g = 0; g < group.length; g++) total += applyDamage(group[g], each, source, frame, { noShare: true });
+        for (var g = 0; g < group.length; g++) total += applyDamage(group[g], each, source, frame, { noShare: true, piercesCover: ctx.piercesCover });
         return total;
       }
     }
