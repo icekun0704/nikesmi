@@ -10,7 +10,7 @@ import json
 import os
 import sys
 
-MAX_LEVEL = 400
+MAX_LEVEL = 1400
 
 
 def load(path):

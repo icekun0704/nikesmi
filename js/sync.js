@@ -65,7 +65,7 @@ window.Sync = (function () {
           function attempt(i) {
             if (i >= areas.length) throw new Error('サーバーが見つかりません');
             return post(API + 'GetUserCharacters', {
-              intl_open_id: Number(ctx.openid), nikke_area_id: areas[i]
+              intl_open_id: String(ctx.openid), nikke_area_id: areas[i]
             }).then(function (res) {
               var list = res && res.data && (res.data.characters || res.data.list);
               if (!list || !list.length) return attempt(i + 1);
@@ -87,7 +87,7 @@ window.Sync = (function () {
           batches.forEach(function (batch) {
             chain = chain.then(function () {
               return post(API + 'GetUserCharacterDetails', {
-                intl_open_id: Number(ctx.openid),
+                intl_open_id: String(ctx.openid),
                 nikke_area_id: ctx.area,
                 name_codes: batch
               }).then(function (res) {
@@ -179,7 +179,13 @@ window.Sync = (function () {
     else if (payload.data && Array.isArray(payload.data.character_details)) list = payload.data.character_details;
     if (!list) return null;
 
-    var out = { version: 2, areaId: toNumber(payload.area_id, 0), characters: [] };
+    var out = {
+      version: 2,
+      areaId: toNumber(payload.area_id, 0),
+      optionEffects: payload.option_effects && typeof payload.option_effects === 'object'
+        ? payload.option_effects : null,
+      characters: []
+    };
     list.forEach(function (raw) {
       var code = toNumber(raw.name_code, 0);
       if (!code) return;
@@ -195,6 +201,8 @@ window.Sync = (function () {
           burst: toNumber(raw.skills && raw.skills.burst != null ? raw.skills.burst : (raw.ulti_skill_lv))
         },
         cube: toNumber(raw.cube_lv != null ? raw.cube_lv : raw.harmony_cube_lv),
+        cubeTid: toNumber(raw.cube_tid != null ? raw.cube_tid : raw.harmony_cube_tid),
+        equipTier: toNumber(raw.equip_tier != null ? raw.equip_tier : raw.head_equip_tier),
         equip: raw.equip || null,
         options: Array.isArray(raw.options) ? raw.options.map(Number) : null,
         treasure: !!(raw.treasure && raw.treasure.equipped != null ? raw.treasure.equipped : raw.treasure),
@@ -213,12 +221,35 @@ window.Sync = (function () {
     4: 'chargeDmg', 5: 'chargeSpeed', 6: 'critRate', 7: 'critDmg'
   };
 
-  function overloadFrom(options) {
+  /* state_effects（上流が返す効果表）の function_type → このシミュレータのキー */
+  var EFFECT_KEY = {
+    StatAtk: 'atk', StatDef: 'def', StatAmmoLoad: 'magazine',
+    StatCritical: 'critRate', StatCriticalDamage: 'critDmg',
+    StatChargeDamage: 'chargeDmg', StatChargeTime: 'chargeSpeed',
+    IncElementDmg: 'elementDmg', StatAccuracyCircle: 'hitRate'
+  };
+
+  function overloadFrom(options, effects) {
     var out = {};
     if (!options) return out;
+
+    if (effects) {
+      var used = false;
+      options.forEach(function (id) {
+        var e = effects[String(id)];
+        if (!e) return;
+        var key = EFFECT_KEY[e[0]];
+        if (!key) return;
+        used = true;
+        var pct = Math.abs(Number(e[1]) || 0) / 100;
+        out[key] = Math.round(((out[key] || 0) + pct) * 100) / 100;
+      });
+      if (used) return out;
+    }
+
     options.forEach(function (id) {
       if (!id || id <= 0) return;
-      var statNo = Math.floor(id / 100);
+      var statNo = Math.floor(id / 100) % 10;
       var tier = id % 100;
       var key = OPT_MAP[statNo];
       if (!key || tier < 1 || tier > 15) return;
@@ -237,6 +268,14 @@ window.Sync = (function () {
     return byCode;
   }
 
+  /* 調和の魔方のティッドは 10003XX で、下2桁が種類 */
+  function cubeTypeOf(entry) {
+    var tid = Number(entry.cubeTid) || 0;
+    if (!tid) return null;
+    var type = tid % 100;
+    return type > 0 ? type : null;
+  }
+
   function cfgFor(entry) {
     var equipLevels = entry.equip
       ? [entry.equip.head, entry.equip.body, entry.equip.arm, entry.equip.leg].map(Number)
@@ -253,7 +292,7 @@ window.Sync = (function () {
         cubeLevel: Math.max(0, Math.min(15, entry.cube || 0)),
         equipLevel: Math.max(0, Math.min(5, avg)),
         collectible: { rarity: 'SR', level: 10 },
-        overload: overloadFrom(entry.options)
+        overload: overloadFrom(entry.options, entry._effects)
       },
       skillLevels: {
         skill1: Math.max(1, Math.min(10, entry.skills.s1 || 1)),
@@ -272,7 +311,9 @@ window.Sync = (function () {
       var c = byCode[String(e.nameCode)];
       if (!c) { unknown.push(e.nameCode); return; }
       owned[String(e.nameCode)] = true;
+      e._effects = data.optionEffects || null;
       chars[String(c.id)] = cfgFor(e);
+      chars[String(c.id)].cubeType = cubeTypeOf(e);
     });
     return {
       owned: owned,
@@ -333,12 +374,29 @@ window.SyncFetch = (function () {
     return null;
   }
 
+  var COOKIE_KEY = 'nikesmi.blablalinkCookie';
+
+  function cookie() {
+    try { return localStorage.getItem(COOKIE_KEY) || ''; } catch (e) { return ''; }
+  }
+  function setCookie(text) {
+    var clean = String(text || '').replace(/[\r\n]/g, '').trim();
+    try {
+      if (clean) localStorage.setItem(COOKIE_KEY, clean);
+      else localStorage.removeItem(COOKIE_KEY);
+    } catch (e) { /* ignore */ }
+    return clean;
+  }
+
   function request(path, payload) {
     var base = proxyBase();
     if (!base) return Promise.reject(new Error('同期サーバーが未設定です'));
+    var headers = { 'Content-Type': 'application/json' };
+    var ck = cookie();
+    if (ck) headers['X-Blablalink-Cookie'] = ck;
     return fetch(base + path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify(payload || {})
     }).then(function (r) {
       return r.json().catch(function () {
@@ -369,7 +427,10 @@ window.SyncFetch = (function () {
       .catch(function () { return null; });
   }
 
-  return { openidFrom: openidFrom, fetchByUrl: fetchByUrl, health: health, proxyBase: proxyBase };
+  return {
+    openidFrom: openidFrom, fetchByUrl: fetchByUrl, health: health,
+    proxyBase: proxyBase, cookie: cookie, setCookie: setCookie
+  };
 })();
 
 window.SyncUI = (function () {
@@ -418,6 +479,13 @@ window.SyncUI = (function () {
       '<button class="syncbtn ghost" id="syncProxySave">保存</button>',
       '</div>',
       '<p class="synchint">作り方は <code>worker/README.md</code> にあります。</p>',
+      '<p class="synchint">中継サーバーに Cookie を置いていない場合は、' +
+      'このブラウザの BlablaLink の Cookie を使えます（保存先はこのブラウザだけ）。</p>',
+      '<div class="syncrow">',
+      '<input id="syncCookie" type="password" spellcheck="false" autocomplete="off" ' +
+      'placeholder="BlablaLink の Cookie">',
+      '<button class="syncbtn ghost" id="syncCookieSave">保存</button>',
+      '</div>',
       '</details>',
 
       '<details class="syncadv">',
@@ -441,6 +509,14 @@ window.SyncUI = (function () {
     document.querySelector('#syncGo').onclick = function () { run(urlInput.value); };
     urlInput.onkeydown = function (e) {
       if (e.key === 'Enter') run(urlInput.value);
+    };
+
+    var cookieInput = document.querySelector('#syncCookie');
+    cookieInput.value = window.SyncFetch.cookie();
+    document.querySelector('#syncCookieSave').onclick = function () {
+      var saved = window.SyncFetch.setCookie(cookieInput.value);
+      cookieInput.value = saved;
+      status(saved ? 'Cookie を保存しました' : 'Cookie を消しました', saved ? 'ok' : 'warn');
     };
 
     document.querySelector('#syncProxySave').onclick = function () {

@@ -34,7 +34,7 @@ function corsHeaders(env, request) {
   return {
     'Access-Control-Allow-Origin': value,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Blablalink-Cookie',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin'
   };
@@ -67,7 +67,7 @@ function commonParams() {
 
 /* ------------------------------------------------------ blablalink 呼び出し */
 
-async function callUpstream(env, path, body) {
+async function callUpstream(env, path, body, cookieOverride) {
   if (!GAME_PATHS.has(path)) throw new Error('unsupported path: ' + path);
 
   const headers = {
@@ -81,7 +81,7 @@ async function callUpstream(env, path, body) {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36'
   };
 
-  const cookie = await getCookie(env);
+  const cookie = cookieOverride || (await getCookie(env));
   if (cookie) headers.Cookie = cookie;
 
   const res = await fetch(UPSTREAM + path, {
@@ -151,15 +151,15 @@ function decodeBase64(value) {
   }
 }
 
-async function fetchRoster(env, openid) {
+async function fetchRoster(env, openid, cookieOverride) {
   const digits = digitsOf(openid) || digitsOf(decodeBase64(openid));
   if (!digits) throw new Error('URL からアカウント情報を読み取れませんでした');
-  const intlOpenId = Number(digits);
-  if (!isFinite(intlOpenId)) throw new Error('URL からアカウント情報を読み取れませんでした');
+  // ここは数値ではなく文字列で渡す。数値だと上流が system error を返す。
+  const intlOpenId = String(digits);
 
   let area = null;
   try {
-    const role = await callUpstream(env, '/api/game/proxy/Game/GetSavedRoleInfo', {});
+    const role = await callUpstream(env, '/api/game/proxy/Game/GetSavedRoleInfo', {}, cookieOverride);
     const found = role && role.data && role.data.role_info && role.data.role_info.area_id;
     if (found) area = Number(found);
   } catch (e) {
@@ -174,7 +174,7 @@ async function fetchRoster(env, openid) {
     const res = await callUpstream(env, '/api/game/proxy/Game/GetUserCharacters', {
       intl_open_id: intlOpenId,
       nikke_area_id: candidate
-    });
+    }, cookieOverride);
     const got = res && res.data && (res.data.characters || res.data.list);
     if (got && got.length) {
       list = got;
@@ -186,15 +186,24 @@ async function fetchRoster(env, openid) {
 
   const codes = list.map((c) => c.name_code).filter(Boolean);
   const details = {};
+  const effects = {};
   for (let i = 0; i < codes.length; i += 20) {
     const res = await callUpstream(env, '/api/game/proxy/Game/GetUserCharacterDetails', {
       intl_open_id: intlOpenId,
       nikke_area_id: usedArea,
       name_codes: codes.slice(i, i + 20)
-    });
+    }, cookieOverride);
     const dl =
       (res && res.data && (res.data.character_details || res.data.characters || res.data.list)) || [];
     for (const d of dl) details[d.name_code] = d;
+
+    // オーバーロードの option id → 効果の対応表。推測せず上流の値を使う。
+    const se = (res && res.data && res.data.state_effects) || [];
+    for (const e of se) {
+      const fn = (e.function_details && e.function_details[0]) || null;
+      if (!fn) continue;
+      effects[String(e.id)] = [fn.function_type, fn.function_value, fn.function_value_type];
+    }
   }
 
   return {
@@ -203,6 +212,7 @@ async function fetchRoster(env, openid) {
     source: 'nikesmi-worker',
     exported_at: new Date().toISOString(),
     area_id: usedArea,
+    option_effects: effects,
     characters: list.map((c) => {
       const d = details[c.name_code] || {};
       const pick = (key) => Number(d[key] != null ? d[key] : c[key]) || 0;
@@ -218,12 +228,14 @@ async function fetchRoster(env, openid) {
           burst: pick('ulti_skill_lv')
         },
         cube_lv: pick('harmony_cube_lv'),
+        cube_tid: pick('harmony_cube_tid'),
         equip: {
           head: pick('head_equip_lv'),
           body: pick('torso_equip_lv'),
           arm: pick('arm_equip_lv'),
           leg: pick('leg_equip_lv')
         },
+        equip_tier: pick('head_equip_tier'),
         options: [
           d.head_equip_option1_id, d.head_equip_option2_id, d.head_equip_option3_id,
           d.torso_equip_option1_id, d.torso_equip_option2_id, d.torso_equip_option3_id,
@@ -250,6 +262,9 @@ export default {
 
     const url = new URL(request.url);
     const route = url.pathname.replace(/\/+$/, '') || '/';
+
+    // ブラウザが持っている Cookie を、その場で転送するだけ。保存はしない。
+    const inlineCookie = sanitizeCookie(request.headers.get('X-Blablalink-Cookie'));
 
     try {
       if (route === '/') {
@@ -279,7 +294,7 @@ export default {
           if (hit) return json(hit, 200, cors);
         }
 
-        const roster = await fetchRoster(env, openid);
+        const roster = await fetchRoster(env, openid, inlineCookie);
         if (env.SESSIONS) {
           await env.SESSIONS.put(cacheKey, JSON.stringify(roster), { expirationTtl: SYNC_TTL });
         }
@@ -290,7 +305,7 @@ export default {
         const path = url.searchParams.get('path') || '';
         if (!GAME_PATHS.has(path)) return fail('この問い合わせには対応していません', 400, cors);
         const body = await safeJson(request);
-        const data = await callUpstream(env, path, body.body || body);
+        const data = await callUpstream(env, path, body.body || body, inlineCookie);
         return json(data, 200, cors);
       }
 
@@ -301,6 +316,15 @@ export default {
     }
   }
 };
+
+/* Cookie ヘッダに使える文字だけ通す */
+function sanitizeCookie(value) {
+  if (!value) return '';
+  const text = String(value).replace(/[\r\n]/g, '');
+  if (text.length > 4096) return '';
+  if (!/^[ -~;=]*$/.test(text)) return '';
+  return text;
+}
 
 async function safeJson(request) {
   try {
