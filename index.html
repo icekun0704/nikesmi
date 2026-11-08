@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="勝利の女神：NIKKE のアリーナ（PvP）編成シミュレータ。5vs5のバースト順・ダメージ・勝敗をフレーム単位で再現します。">
+<title>ニケシミュ — NIKKE アリーナ編成シミュレータ</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0c10'/%3E%3Crect x='13' y='13' width='6' height='6' fill='%233ddbb4' transform='rotate(45 16 16)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark"></span>
+    <span class="brand-name">NIKESMI</span>
+    <span class="brand-sub">ニケシミュ</span>
+  </div>
+
+  <nav class="modes" id="modes">
+    <button class="mode on" data-mode="champion">チャンピオン</button>
+    <button class="mode" data-mode="rookie">ルーキー</button>
+    <button class="mode" data-mode="special">スペシャル</button>
+  </nav>
+
+  <div class="topspacer"></div>
+
+  <button class="tbtn-ghost" id="syncBtn">アカウント同期</button>
+  <button class="tbtn-ghost" id="helpBtn">ヘルプ</button>
+  <button class="tbtn-ghost" id="notesBtn">更新履歴</button>
+</header>
+
+<!-- ------------------------------------------------------------- boards -->
+<section class="boards" id="boards">
+  <div class="board sideA" data-side="A">
+    <div class="boardhead">
+      <span class="side-label">自チーム</span>
+      <select class="partypick" id="partyA" title="保存した編成"></select>
+      <button class="iconbtn" id="saveA" title="いまの編成を保存">保存</button>
+      <span class="boardmeta" id="metaA"></span>
+    </div>
+    <div class="slots" id="slotsA"></div>
+  </div>
+
+  <div class="board sideB" data-side="B">
+    <div class="boardhead">
+      <span class="side-label">相手チーム</span>
+      <select class="partypick" id="partyB" title="保存した編成"></select>
+      <button class="iconbtn" id="saveB" title="いまの編成を保存">保存</button>
+      <span class="boardmeta" id="metaB"></span>
+    </div>
+    <div class="slots" id="slotsB"></div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------- verdict -->
+<section class="verdictbar" id="verdictbar">
+  <div class="verdict idle" id="verdict">編成を組んでください</div>
+  <div class="facts" id="facts"></div>
+</section>
+
+<!-- -------------------------------------------------------------- roster -->
+<section class="rosterpane">
+  <div class="rosterbar">
+    <div class="seg-group" id="editSeg">
+      <button class="seg on" data-side="A">自分に入れる</button>
+      <button class="seg" data-side="B">相手に入れる</button>
+    </div>
+
+    <input id="search" type="search" placeholder="名前で検索" autocomplete="off">
+
+    <div class="filters">
+      <button class="fchip" data-filter="burst" data-value="B1">B1</button>
+      <button class="fchip" data-filter="burst" data-value="B2">B2</button>
+      <button class="fchip" data-filter="burst" data-value="B3">B3</button>
+      <span class="fsep"></span>
+      <button class="fchip" data-filter="element" data-value="灼熱">灼熱</button>
+      <button class="fchip" data-filter="element" data-value="水冷">水冷</button>
+      <button class="fchip" data-filter="element" data-value="風圧">風圧</button>
+      <button class="fchip" data-filter="element" data-value="電撃">電撃</button>
+      <button class="fchip" data-filter="element" data-value="鉄甲">鉄甲</button>
+      <span class="fsep"></span>
+      <button class="fchip" data-filter="classType" data-value="火力型">火力</button>
+      <button class="fchip" data-filter="classType" data-value="防御型">防御</button>
+      <button class="fchip" data-filter="classType" data-value="支援型">支援</button>
+    </div>
+
+    <button class="seg" id="ownedOnly" title="同期した所持ニケだけ表示">所持のみ</button>
+
+    <select id="sortBy" title="並べ替え">
+      <option value="power">戦闘力順</option>
+      <option value="atk">攻撃力順</option>
+      <option value="hp">HP順</option>
+      <option value="burst">バースト順</option>
+      <option value="name">名前順</option>
+    </select>
+
+    <span class="count" id="count"></span>
+  </div>
+
+  <div class="roster" id="roster"></div>
+</section>
+
+<!-- ------------------------------------------------------------ timeline -->
+<section class="stage" id="stage">
+  <div class="stagehead">
+    <button class="expandbtn" id="expandBtn" aria-expanded="false">
+      <span class="chev">▾</span><span class="expandlabel">タイムラインを開く</span>
+    </button>
+    <span class="stagehint" id="stageHint">チームの残りHP</span>
+    <div class="zoom">
+      <button class="zbtn" id="zoomOut" title="縮小">−</button>
+      <span id="zoomLabel">1.0×</span>
+      <button class="zbtn" id="zoomIn" title="拡大">＋</button>
+      <button class="zbtn" id="zoomFit" title="全体を表示">全体</button>
+    </div>
+  </div>
+  <div class="stagebody" id="stagebody">
+    <div class="canvaswrap"><canvas id="tl"></canvas></div>
+    <aside class="eventpane" id="eventpane" hidden>
+      <div class="eventhead">イベント</div>
+      <div class="eventlist" id="eventlist"></div>
+    </aside>
+  </div>
+</section>
+
+<footer class="transport">
+  <button class="tbtn" id="toStart" title="最初へ">⏮</button>
+  <button class="tbtn play" id="playBtn" title="再生 / 停止">▶</button>
+  <input type="range" id="scrub" min="0" max="1000" value="0">
+  <span class="readout"><span id="rdT">0.00</span><span class="u">秒</span>
+    <span id="rdF">0</span><span class="u">F</span></span>
+  <select id="speed" title="再生速度">
+    <option value="0.25">0.25×</option>
+    <option value="0.5">0.5×</option>
+    <option value="1" selected>1×</option>
+    <option value="2">2×</option>
+  </select>
+</footer>
+
+<!-- ------------------------------------------------------------- modals -->
+<div class="modal" id="unitSheet" hidden>
+  <div class="modalpanel wide">
+    <div class="modalhead">
+      <span class="h" id="unitTitle">ステータス</span>
+      <button class="close" data-close="unitSheet">✕</button>
+    </div>
+    <div class="unitbody" id="unitBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="helpSheet" hidden>
+  <div class="modalpanel">
+    <div class="modalhead">
+      <span class="h">ヘルプ</span>
+      <button class="close" data-close="helpSheet">✕</button>
+    </div>
+    <div class="docbody" id="helpBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="notesSheet" hidden>
+  <div class="modalpanel">
+    <div class="modalhead">
+      <span class="h">更新履歴</span>
+      <button class="close" data-close="notesSheet">✕</button>
+    </div>
+    <div class="docbody" id="notesBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="syncSheet" hidden>
+  <div class="modalpanel">
+    <div class="modalhead">
+      <span class="h">アカウント同期</span>
+      <button class="close" data-close="syncSheet">✕</button>
+    </div>
+    <div class="docbody" id="syncBody"></div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/data.js"></script>
+<script src="js/stat_data.js"></script>
+<script src="js/skills.js"></script>
+<script src="js/name_code_map.js"></script>
+<script src="js/portraits.js"></script>
+<script src="js/gauge.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/parties.js"></script>
+<script src="js/docs.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

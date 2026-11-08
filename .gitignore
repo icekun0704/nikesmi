@@ -1,0 +1,8 @@
+# ゲーム画像（再取得: python -I tools/fetch_portraits.py）
+assets/portraits/
+
+# 開発メモ・一時ファイル
+_src/
+*.log
+node_modules/
+.claude/

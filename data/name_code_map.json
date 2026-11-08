@@ -1,0 +1,812 @@
+{
+"1007": {
+"base": 147,
+"jp": "D",
+"treasure": null
+},
+"1010": {
+"base": 25,
+"jp": "ラプラス",
+"treasure": 25
+},
+"1012": {
+"base": 122,
+"jp": "サクラ",
+"treasure": null
+},
+"1013": {
+"base": 197,
+"jp": "ソルジャーE.G.",
+"treasure": null
+},
+"1014": {
+"base": 207,
+"jp": "ソルジャーF.A.",
+"treasure": null
+},
+"1015": {
+"base": 208,
+"jp": "プロダクト08",
+"treasure": null
+},
+"1017": {
+"base": 196,
+"jp": "I-DOLL・フラワー",
+"treasure": null
+},
+"1019": {
+"base": 53,
+"jp": "マナ",
+"treasure": null
+},
+"1020": {
+"base": 6,
+"jp": "ジャッカル",
+"treasure": null
+},
+"1021": {
+"base": 84,
+"jp": "モラン",
+"treasure": null
+},
+"1022": {
+"base": 17,
+"jp": "バイパー",
+"treasure": 18
+},
+"1023": {
+"base": 210,
+"jp": "I-DOLL・サン",
+"treasure": null
+},
+"1024": {
+"base": 195,
+"jp": "プロダクト23",
+"treasure": null
+},
+"1025": {
+"base": 198,
+"jp": "ソルジャーO.W.",
+"treasure": 146
+},
+"3001": {
+"base": 132,
+"jp": "ラピ",
+"treasure": null
+},
+"3002": {
+"base": 20,
+"jp": "ネオン",
+"treasure": null
+},
+"3003": {
+"base": 202,
+"jp": "デルタ",
+"treasure": null
+},
+"3004": {
+"base": 9,
+"jp": "ルマニ",
+"treasure": null
+},
+"3005": {
+"base": 5,
+"jp": "アニス",
+"treasure": null
+},
+"3006": {
+"base": 83,
+"jp": "ミハラ",
+"treasure": null
+},
+"3007": {
+"base": 94,
+"jp": "ベロータ",
+"treasure": null
+},
+"3008": {
+"base": 48,
+"jp": "ミカ",
+"treasure": null
+},
+"3009": {
+"base": 93,
+"jp": "N102",
+"treasure": null
+},
+"3010": {
+"base": 62,
+"jp": "エーテル",
+"treasure": null
+},
+"3013": {
+"base": 105,
+"jp": "ラム",
+"treasure": null
+},
+"3014": {
+"base": 155,
+"jp": "ミサト",
+"treasure": null
+},
+"3016": {
+"base": 201,
+"jp": "リリー",
+"treasure": null
+},
+"3018": {
+"base": 199,
+"jp": "クルミ",
+"treasure": null
+},
+"3019": {
+"base": 223,
+"jp": "アイギス",
+"treasure": null
+},
+"5001": {
+"base": 106,
+"jp": "マクスウェル",
+"treasure": null
+},
+"5002": {
+"base": 23,
+"jp": "シュガー",
+"treasure": null
+},
+"5003": {
+"base": 99,
+"jp": "エクシア",
+"treasure": 100
+},
+"5004": {
+"base": 167,
+"jp": "アリス",
+"treasure": null
+},
+"5005": {
+"base": 174,
+"jp": "エマ",
+"treasure": null
+},
+"5006": {
+"base": 96,
+"jp": "ユニ",
+"treasure": null
+},
+"5007": {
+"base": 137,
+"jp": "プリバティ",
+"treasure": 145
+},
+"5008": {
+"base": 128,
+"jp": "ブラン",
+"treasure": null
+},
+"5009": {
+"base": 21,
+"jp": "ノワール",
+"treasure": null
+},
+"5011": {
+"base": 152,
+"jp": "リター",
+"treasure": null
+},
+"5012": {
+"base": 80,
+"jp": "スノーホワイト",
+"treasure": null
+},
+"5014": {
+"base": 143,
+"jp": "ジュリア",
+"treasure": 144
+},
+"5015": {
+"base": 160,
+"jp": "シグナル",
+"treasure": null
+},
+"5016": {
+"base": 63,
+"jp": "ポリ",
+"treasure": 64
+},
+"5017": {
+"base": 156,
+"jp": "ミランダ",
+"treasure": null
+},
+"5018": {
+"base": 129,
+"jp": "ブリッド",
+"treasure": null
+},
+"5019": {
+"base": 78,
+"jp": "ソリン",
+"treasure": null
+},
+"5020": {
+"base": 175,
+"jp": "ディーゼル",
+"treasure": 176
+},
+"5021": {
+"base": 7,
+"jp": "センチ",
+"treasure": 8
+},
+"5023": {
+"base": 90,
+"jp": "ウンファ",
+"treasure": null
+},
+"5024": {
+"base": 16,
+"jp": "ドレイク",
+"treasure": 15
+},
+"5025": {
+"base": 77,
+"jp": "クロウ",
+"treasure": null
+},
+"5026": {
+"base": 67,
+"jp": "メアリー",
+"treasure": null
+},
+"5027": {
+"base": 22,
+"jp": "ペッパー",
+"treasure": null
+},
+"5028": {
+"base": 107,
+"jp": "ミルク",
+"treasure": 108
+},
+"5029": {
+"base": 120,
+"jp": "ユルハ",
+"treasure": null
+},
+"5030": {
+"base": 121,
+"jp": "アドミ",
+"treasure": null
+},
+"5031": {
+"base": 179,
+"jp": "ギロチン",
+"treasure": null
+},
+"5032": {
+"base": 19,
+"jp": "メイデン",
+"treasure": null
+},
+"5033": {
+"base": 91,
+"jp": "ルドミラ",
+"treasure": null
+},
+"5034": {
+"base": 133,
+"jp": "ルピー",
+"treasure": null
+},
+"5035": {
+"base": 95,
+"jp": "ヤン",
+"treasure": null
+},
+"5037": {
+"base": 158,
+"jp": "ノベル",
+"treasure": null
+},
+"5038": {
+"base": 148,
+"jp": "エピネル",
+"treasure": null
+},
+"5040": {
+"base": 34,
+"jp": "ラプンツェル",
+"treasure": null
+},
+"5041": {
+"base": 37,
+"jp": "紅蓮",
+"treasure": null
+},
+"5042": {
+"base": 57,
+"jp": "ハラン",
+"treasure": null
+},
+"5043": {
+"base": 12,
+"jp": "ノア",
+"treasure": null
+},
+"5044": {
+"base": 166,
+"jp": "モダニア",
+"treasure": null
+},
+"5045": {
+"base": 170,
+"jp": "ロザンナ",
+"treasure": null
+},
+"5048": {
+"base": 66,
+"jp": "マルチャーナ",
+"treasure": null
+},
+"5049": {
+"base": 89,
+"jp": "ルージュ",
+"treasure": null
+},
+"5050": {
+"base": 104,
+"jp": "ココア",
+"treasure": null
+},
+"5051": {
+"base": 186,
+"jp": "ソーダ",
+"treasure": null
+},
+"5053": {
+"base": 180,
+"jp": "キロ",
+"treasure": null
+},
+"5054": {
+"base": 44,
+"jp": "ビスケット",
+"treasure": null
+},
+"5055": {
+"base": 61,
+"jp": "ギルティ",
+"treasure": null
+},
+"5059": {
+"base": 138,
+"jp": "シン",
+"treasure": null
+},
+"5061": {
+"base": 139,
+"jp": "ドロシー",
+"treasure": null
+},
+"5063": {
+"base": 38,
+"jp": "アンカー",
+"treasure": null
+},
+"5064": {
+"base": 123,
+"jp": "メアリー：ベイゴッデス",
+"treasure": null
+},
+"5065": {
+"base": 178,
+"jp": "クラウン",
+"treasure": null
+},
+"5066": {
+"base": 103,
+"jp": "ヘルム",
+"treasure": 1
+},
+"5068": {
+"base": 157,
+"jp": "ネロ",
+"treasure": null
+},
+"5069": {
+"base": 151,
+"jp": "ライ",
+"treasure": null
+},
+"5070": {
+"base": 173,
+"jp": "アリア",
+"treasure": null
+},
+"5071": {
+"base": 185,
+"jp": "ネオン：ブルーオーシャン",
+"treasure": null
+},
+"5074": {
+"base": 49,
+"jp": "ノイズ",
+"treasure": null
+},
+"5075": {
+"base": 159,
+"jp": "ボリューム",
+"treasure": null
+},
+"5078": {
+"base": 76,
+"jp": "クエンシー",
+"treasure": null
+},
+"5079": {
+"base": 153,
+"jp": "マスト",
+"treasure": null
+},
+"5081": {
+"base": 140,
+"jp": "トーブ",
+"treasure": 141
+},
+"5087": {
+"base": 134,
+"jp": "ルピー：ウィンターショッパー",
+"treasure": null
+},
+"5088": {
+"base": 28,
+"jp": "ツバイ",
+"treasure": 30
+},
+"5089": {
+"base": 154,
+"jp": "マキマ",
+"treasure": null
+},
+"5090": {
+"base": 50,
+"jp": "パワー",
+"treasure": null
+},
+"5092": {
+"base": 65,
+"jp": "レオナ",
+"treasure": null
+},
+"5094": {
+"base": 127,
+"jp": "2B",
+"treasure": null
+},
+"5095": {
+"base": 32,
+"jp": "A2",
+"treasure": null
+},
+"5096": {
+"base": 13,
+"jp": "パスカル",
+"treasure": null
+},
+"5098": {
+"base": 126,
+"jp": "ヘルム：アクアマリン",
+"treasure": null
+},
+"5099": {
+"base": 68,
+"jp": "ナガ",
+"treasure": null
+},
+"5100": {
+"base": 45,
+"jp": "ティア",
+"treasure": null
+},
+"5102": {
+"base": 191,
+"jp": "スノーホワイト：イノセントデイズ",
+"treasure": null
+},
+"5103": {
+"base": 171,
+"jp": "ルドミラ：ウィンターオーナー",
+"treasure": null
+},
+"5104": {
+"base": 27,
+"jp": "ミカ：スノーバディ",
+"treasure": null
+},
+"5105": {
+"base": 56,
+"jp": "紅蓮：ブラックシャドウ",
+"treasure": null
+},
+"5106": {
+"base": 60,
+"jp": "プリバティ：アンカインド・メイド",
+"treasure": null
+},
+"5108": {
+"base": 182,
+"jp": "レム",
+"treasure": null
+},
+"5109": {
+"base": 11,
+"jp": "エミリア",
+"treasure": null
+},
+"5110": {
+"base": 98,
+"jp": "D：キラーワイフ",
+"treasure": null
+},
+"5111": {
+"base": 42,
+"jp": "ベイ",
+"treasure": 43
+},
+"5112": {
+"base": 109,
+"jp": "トロニー",
+"treasure": null
+},
+"5114": {
+"base": 149,
+"jp": "アリス：ワンダーランドバニー",
+"treasure": null
+},
+"5115": {
+"base": 150,
+"jp": "クレイ",
+"treasure": null
+},
+"5116": {
+"base": 135,
+"jp": "ロザンナ：シックオーシャン",
+"treasure": null
+},
+"5118": {
+"base": 79,
+"jp": "アスカ",
+"treasure": null
+},
+"5119": {
+"base": 82,
+"jp": "レイ",
+"treasure": null
+},
+"5121": {
+"base": 92,
+"jp": "クエンシー：エスケープクイーン",
+"treasure": null
+},
+"5122": {
+"base": 85,
+"jp": "ファントム",
+"treasure": null
+},
+"5123": {
+"base": 112,
+"jp": "ラプンツェル：ピュアグレイス",
+"treasure": null
+},
+"5124": {
+"base": 169,
+"jp": "シンデレラ",
+"treasure": null
+},
+"5125": {
+"base": 36,
+"jp": "グレイブ",
+"treasure": null
+},
+"5126": {
+"base": 177,
+"jp": "フローラ",
+"treasure": null
+},
+"5127": {
+"base": 14,
+"jp": "メイデン：アイスローズ",
+"treasure": null
+},
+"5128": {
+"base": 131,
+"jp": "ギロチン：ウィンタースレイヤー",
+"treasure": null
+},
+"5130": {
+"base": 184,
+"jp": "マスト：ロマンチックメイド",
+"treasure": null
+},
+"5131": {
+"base": 39,
+"jp": "アンカー：イノセントメイド",
+"treasure": null
+},
+"5133": {
+"base": 172,
+"jp": "アスカ：WILLE",
+"treasure": null
+},
+"5134": {
+"base": 4,
+"jp": "トリナ",
+"treasure": null
+},
+"5135": {
+"base": 101,
+"jp": "ブレッディ",
+"treasure": null
+},
+"5136": {
+"base": 47,
+"jp": "クラスト",
+"treasure": null
+},
+"5137": {
+"base": 161,
+"jp": "リトルマーメイド",
+"treasure": null
+},
+"5140": {
+"base": 31,
+"jp": "アルカナ",
+"treasure": null
+},
+"5142": {
+"base": 142,
+"jp": "イヴ",
+"treasure": null
+},
+"5143": {
+"base": 59,
+"jp": "レイヴン",
+"treasure": null
+},
+"5144": {
+"base": 51,
+"jp": "ソラ",
+"treasure": null
+},
+"5145": {
+"base": 70,
+"jp": "ドロシー：セレンディピティ",
+"treasure": null
+},
+"5146": {
+"base": 188,
+"jp": "エレグ：ブーム・アンド・ショック",
+"treasure": null
+},
+"5147": {
+"base": 189,
+"jp": "エマ：タクティカル・アップ",
+"treasure": null
+},
+"5152": {
+"base": 52,
+"jp": "エイダ",
+"treasure": null
+},
+"5153": {
+"base": 55,
+"jp": "ジル",
+"treasure": null
+},
+"5154": {
+"base": 190,
+"jp": "デルタ：ニンジャシーフ",
+"treasure": null
+},
+"5155": {
+"base": 163,
+"jp": "ナユタ",
+"treasure": null
+},
+"5156": {
+"base": 26,
+"jp": "リバーレリオ",
+"treasure": null
+},
+"5157": {
+"base": 218,
+"jp": "チャイム",
+"treasure": null
+},
+"5158": {
+"base": 72,
+"jp": "ソリン：フロストチケット",
+"treasure": null
+},
+"5159": {
+"base": 35,
+"jp": "ディーゼル：ウィンタースイーツ",
+"treasure": null
+},
+"5161": {
+"base": 3,
+"jp": "スノーホワイト：ヘビーアームズ",
+"treasure": null
+},
+"5162": {
+"base": 58,
+"jp": "レーベル",
+"treasure": null
+},
+"5164": {
+"base": 164,
+"jp": "千束",
+"treasure": null
+},
+"5165": {
+"base": 118,
+"jp": "たきな",
+"treasure": null
+},
+"5166": {
+"base": 165,
+"jp": "E.H.",
+"treasure": null
+},
+"5167": {
+"base": 74,
+"jp": "アルカナ：フォーチュンメイト",
+"treasure": null
+},
+"5169": {
+"base": 2,
+"jp": "アニス：スター",
+"treasure": null
+},
+"5170": {
+"base": 192,
+"jp": "ネオン：ビジョン・アイ",
+"treasure": null
+},
+"5172": {
+"base": 193,
+"jp": "ミント",
+"treasure": null
+},
+"5175": {
+"base": 215,
+"jp": "シンデレラ：クリスタルウェーブ",
+"treasure": null
+},
+"5177": {
+"base": 213,
+"jp": "ラプラス：アルティメットヒーロー",
+"treasure": null
+},
+"5179": {
+"base": 224,
+"jp": "クイーン（真）",
+"treasure": null
+},
+"5185": {
+"base": 230,
+"jp": "マリアン：クイーン",
+"treasure": null
+},
+"5186": {
+"base": 231,
+"jp": "紅蓮：神殺",
+"treasure": null
+},
+"5187": {
+"base": 232,
+"jp": "ラプンツェル：サンクチュアリ",
+"treasure": null
+}
+}
