@@ -257,7 +257,13 @@ button,select,input{font-family:inherit;font-size:inherit;color:inherit}
 }
 .card .plate{padding:5px 7px 6px;display:flex;flex-direction:column;gap:1px;min-width:0}
 .card .nm{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card .sub{font-family:var(--font-num);font-size:9.5px;color:var(--fg-3);white-space:nowrap;overflow:hidden}
+.card .sub{display:flex;align-items:center;gap:4px;font-family:var(--font-num);font-size:9.5px;color:var(--fg-3);white-space:nowrap;overflow:hidden}
+.card .tagcls{font-family:var(--font-ui);font-size:8px;padding:0 3px;border-radius:2px;background:var(--panel-3);color:var(--fg-2)}
+.card .tagcls.火力{background:rgba(255,107,74,.18);color:#ff9b82}
+.card .tagcls.防御{background:rgba(74,168,255,.18);color:#8cc6ff}
+.card .tagcls.支援{background:rgba(87,217,139,.18);color:#8ee7b3}
+.card .tadev{font-size:9px;font-weight:600}
+.card .tacp{margin-left:auto;color:var(--fg-3)}
 .card .cls{position:absolute;right:5px;bottom:5px;font-family:var(--font-ui);font-size:8px;padding:1px 4px;border-radius:2px;background:rgba(0,0,0,.62);color:var(--fg-2);letter-spacing:.04em}
 .card .adv{position:absolute;left:5px;bottom:5px;font-size:8px;padding:1px 3px;border-radius:2px;background:rgba(0,0,0,.62)}
 .card .used{

@@ -195,14 +195,6 @@
       }
 
       thumb.appendChild(el('span', 'badgeB', burstStages(c)[0] || ''));
-      var clsTag = { '火力型': '火力', '防御型': '防御', '支援型': '支援' }[c.classType] || c.classType;
-      thumb.appendChild(el('span', 'cls', clsTag));
-      var beats = ELEMENT_BEATS[c.element];
-      var prey = window.CHARACTERS.filter(function (x) { return x.element === beats; })[0];
-      var adv = el('span', 'adv', (beats || '').slice(0, 2));
-      adv.title = c.element + ' は ' + (beats || '—') + ' に有利';
-      adv.style.color = ELEMENT_COLOR[beats] || '#888';
-      thumb.appendChild(adv);
       var dot = el('span', 'badgeE');
       dot.style.background = ELEMENT_COLOR[c.element] || '#888';
       thumb.appendChild(dot);
@@ -210,8 +202,16 @@
 
       var plate = el('div', 'plate');
       plate.appendChild(el('div', 'nm', c.name));
-      plate.appendChild(el('div', 'sub', Math.round(cpOf({ charId: c.id }) / 100) / 10 + 'k ・ ' +
-        Math.round(statsOf({ charId: c.id }).atk / 1000) + 'k'));
+      var clsTag = { '火力型': '火力', '防御型': '防御', '支援型': '支援' }[c.classType] || c.classType;
+      var beats = ELEMENT_BEATS[c.element];
+      var line = el('div', 'sub');
+      line.appendChild(el('span', 'tagcls ' + c.classType.replace('型', ''), clsTag));
+      var advSpan = el('span', 'tadev', '→' + (beats || '—'));
+      advSpan.style.color = ELEMENT_COLOR[beats] || '#888';
+      advSpan.title = c.element + ' は ' + (beats || '—') + ' に有利';
+      line.appendChild(advSpan);
+      line.appendChild(el('span', 'tacp', Math.round(cpOf({ charId: c.id }) / 100) / 10 + 'k'));
+      plate.appendChild(line);
 
       card.appendChild(thumb);
       card.appendChild(plate);
