@@ -72,7 +72,8 @@ def main():
                             bad += 1
             bad_total += bad
             unk_total += unk
-            has_special = rec['id'] in specials
+            base_id = by_org.get((org, False), {}).get('id')
+            has_special = rec['id'] in specials or (base_id is not None and base_id in specials)
             if (bad == 0 and unk == 0) or has_special:
                 clean += 1
             elif not has_special:

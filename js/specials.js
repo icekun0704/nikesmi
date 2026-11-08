@@ -4624,6 +4624,95 @@ window.SPECIALS = window.SPECIALS || {};
   };
 })();
 
+/* ---- 165.js ---- */
+/* E.H. (id 165 / org 184)
+ *
+ * 原文のうち、パーサで表現できていない部分。
+ *
+ *  スキル1: 廃品を10個回収した時、自家製弾倉が4本未満なら
+ *           廃品リセット＋弾倉1本増加（最大4本）＋攻撃力7.5%×弾倉数
+ *  スキル2: 廃品の入手源
+ *           ・戦闘開始時 10個（最大10）
+ *           ・敵が倒れた時 2個
+ *           ・廃品を回収した時 有利コードの攻撃ダメージ16.36%（15秒）
+ *           （破壊可能な発射体・パーツはアリーナに存在しないので扱わない）
+ *  バースト: 使用武器変更
+ *           ・チャージ時間0.4秒固定／ダメージ61%／フルチャージ250%
+ *           ・最大装弾数 1発 × 自家製弾倉の数／10秒
+ *           ・攻撃力430.05%（10秒）
+ */
+(function () {
+  var CYCLE = 10;      // 弾倉1本に必要な廃品
+  var MAX_MAG = 4;
+
+  (window.SPECIALS = window.SPECIALS || {})[165] = {
+    init: function (u, E) {
+      u.eh = {
+        scrap: 10,        // 戦闘開始時に10個
+        mags: 0,
+        lastAlive: null,
+        windowUntil: -1,
+        baseMagazine: u.firing.magazine
+      };
+      applyMagazines(u, E, 0);
+      collect(u, E, 0);   // 開始時の10個は回収済みとして扱う
+    },
+
+    tick: function (u, E, frame) {
+      var st = u.eh;
+      var aliveEnemies = E.alive(E.enemies(u)).length;
+
+      // 敵が倒れた時 廃品2個
+      if (st.lastAlive !== null && aliveEnemies < st.lastAlive) {
+        var gained = (st.lastAlive - aliveEnemies) * 2;
+        st.scrap = Math.min(10, st.scrap + gained);
+        collect(u, E, frame);
+      }
+      st.lastAlive = aliveEnemies;
+
+      // バースト後の武器変更が切れたら元に戻す
+      if (st.windowUntil > 0 && frame > st.windowUntil) {
+        st.windowUntil = -1;
+        u.chargeFixed = 0;
+        u.firing.magazine = st.baseMagazine;
+        u.firing.shotsInMagazine = 0;
+      }
+    },
+
+    onBurst: function (u, E, frame) {
+      var st = u.eh;
+      // 攻撃力430.05%：10秒
+      E.buff(u, 'eh-atk', 'atkPct', 430.05, 'up', frame + 10 * E.FPS);
+      // 武器変更：チャージ0.4秒固定・装弾数＝弾倉の数・10秒
+      st.windowUntil = frame + 10 * E.FPS;
+      u.chargeFixed = Math.round(0.4 * E.FPS);
+      u.firing.magazine = Math.max(1, st.mags);
+      u.firing.shotsInMagazine = 0;
+      E.event({ frame: frame, kind: 'eh-burst', side: u.side, unit: u.name });
+    }
+  };
+
+  /* 廃品を回収したときの効果（有利コードの攻撃ダメージ16.36%：15秒） */
+  function collect(u, E, frame) {
+    E.buff(u, 'eh-elem', 'elementDmgPct', 16.36, 'up', frame + 15 * E.FPS);
+  }
+
+  /* 弾倉を製造できるだけ作る（10個ごとに1本、最大4本） */
+  function applyMagazines(u, E, frame) {
+    var st = u.eh;
+    var made = false;
+    while (st.scrap >= CYCLE && st.mags < MAX_MAG) {
+      st.scrap -= CYCLE;
+      st.mags += 1;
+      made = true;
+    }
+    if (made) {
+      // 攻撃力7.5%×弾倉数（持続）。作り直すたびに上書きする。
+      E.buff(u, 'eh-mag', 'atkPct', 7.5 * st.mags, 'up', Infinity);
+    }
+  }
+})();
+
 /* ---- 167.js ---- */
 /* アリス (167 / org 74)
  *
@@ -7671,6 +7760,64 @@ window.SPECIALS = window.SPECIALS || {};
       for (var i = 0; i < enemies.length; i++) {
         hack(u, enemies[i], frame, 6, 5);
       }
+    }
+  };
+})();
+
+/* ---- 2.js ---- */
+/* アニス：スター (id 2 / org 187)
+ *
+ * スキル1は「部隊構成による効果：該当効果のみ適用」で、編成によって2通りに分かれる。
+ *
+ *   A) 自分を除く基本バースト段階1の味方が【いない】場合 — 私だけの星
+ *      ・自分に 攻撃力40.01%▲（解除不可）
+ *      ・味方全体に バーストスキルクールタイム7.48秒▼
+ *   B) 【いる】場合 — みんなの星
+ *      ・自分がバースト再突入1段階に変更（バースト連鎖は gauge.js 側が処理済み）
+ *
+ * どちらの場合も、戦闘開始時から自分が生存している限り
+ * 味方全体のバーストゲージのチャージ速度 +6%。
+ * （パーサは条件を読めず発動しないので、ここで入れる）
+ */
+(function () {
+  function hasOtherB1(u, E) {
+    var team = E.team(u);
+    for (var i = 0; i < team.length; i++) {
+      var a = team[i];
+      if (a === u || !a.alive) continue;
+      var st = String(a.char && a.char.burstStage || '');
+      if (/B1/.test(st) && !/B123/.test(st)) return true;
+    }
+    return false;
+  }
+
+  (window.SPECIALS = window.SPECIALS || {})[2] = {
+    init: function (u, E) {
+      u.anisStar = { mode: hasOtherB1(u, E) ? 'everyone' : 'onlyme', cdApplied: false };
+
+      // 戦闘開始時、味方全体に バーストゲージのチャージ速度6%▲（自分が生存している限り）
+      var team = E.team(u);
+      for (var i = 0; i < team.length; i++) {
+        if (!team[i].alive) continue;
+        E.buff(team[i], 'anis-gauge-' + team[i].pos, 'burstGaugePct', 6, 'up', Infinity);
+      }
+
+      if (u.anisStar.mode === 'onlyme') {
+        E.buff(u, 'anis-solo', 'atkPct', 40.01, 'up', Infinity);
+      }
+    },
+
+    tick: function (u, E, frame) {
+      var st = u.anisStar;
+      if (st.mode !== 'onlyme' || st.cdApplied) return;
+      // 味方全体のバーストクールタイムを7.48秒短縮（1回）
+      var team = E.team(u);
+      for (var i = 0; i < team.length; i++) {
+        var a = team[i];
+        if (a === u || !a.alive) continue;
+        a.burstReadyAt = Math.max(0, a.burstReadyAt - 7.48 * E.FPS);
+      }
+      st.cdApplied = true;
     }
   };
 })();
