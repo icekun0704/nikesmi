@@ -571,7 +571,15 @@ window.SyncUI = (function () {
     window.SyncFetch.fetchByUrl(value).then(function (data) {
       importPayload(data);
     }).catch(function (e) {
-      status((e && e.message) || '同期できませんでした', 'warn');
+      var msg = (e && e.message) || '';
+      if (/ログイン/.test(msg)) {
+        status('読み込めませんでした。BlablaLink にログインした状態で、下の「うまくいかないとき」から取り込んでください', 'warn');
+        document.querySelectorAll('.syncadv')[1].open = true;
+      } else if (/URL/.test(msg)) {
+        status('URL を読み取れませんでした。BlablaLink のプロフィール画面の URL を貼ってください', 'warn');
+      } else {
+        status(msg || '同期できませんでした', 'warn');
+      }
     }).then(function () {
       go.disabled = false;
     });
