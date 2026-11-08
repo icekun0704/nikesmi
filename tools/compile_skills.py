@@ -333,7 +333,8 @@ def parse_effect(text, treasure):
     if line.startswith('攻撃範囲の中心に強制移動'):
         return {'op': 'pull', 'raw': line}
     if '遮蔽物' in line:
-        return {'op': 'coverStat', 'raw': line}
+        m = re.search(NUM + r'%', line)
+        return {'op': 'coverStat', 'value': float(m.group(1)) if m else None, 'raw': line}
     if '使用武器変更' in line:
         return {'op': 'weaponChange', 'raw': line}
     if 'スキルN強制使用' in line or '強制使用' in line:

@@ -543,6 +543,27 @@ window.Engine = (function () {
         }
         return;
       }
+      case 'coverStat': {
+        /* 遮蔽物のHP回復と最大HP増加。遮蔽物は回復しないのが基本なので、
+         * 明示された効果だけを反映する。 */
+        if (effect.value == null || !isFinite(effect.value)) return;
+        var isHeal = /回復/.test(effect.raw || '');
+        var isMax = /最大HP/.test(effect.raw || '');
+        for (var cs = 0; cs < targets.length; cs++) {
+          var tgt = targets[cs];
+          if (isMax) {
+            var add = u.hpMax * effect.value / 100;
+            tgt.coverMax = Math.round((tgt.coverMax || 0) + add);
+            tgt.coverHp = Math.min(tgt.coverMax, (tgt.coverHp || 0) + add);
+          } else if (isHeal) {
+            var base = tgt.coverMax || 0;
+            tgt.coverHp = Math.min(base, (tgt.coverHp || 0) + base * effect.value / 100);
+          } else {
+            tgt.coverHp = Math.min(tgt.coverMax || 0, (tgt.coverHp || 0) + (tgt.coverMax || 0) * (effect.value || 0) / 100);
+          }
+        }
+        return;
+      }
       case 'taunt': u.tauntUntil = Math.max(u.tauntUntil, until); return;
       case 'invuln': for (var v = 0; v < targets.length; v++) targets[v].invulnUntil = Math.max(targets[v].invulnUntil, until); return;
       case 'stun': for (var st = 0; st < targets.length; st++) targets[st].stunUntil = Math.max(targets[st].stunUntil, until); return;
