@@ -268,9 +268,12 @@ def parse_effect(text, treasure):
         return out
 
     # ---- damage-based healing over time ----------------------------------
-    m = re.search(r'攻撃ダメージの' + NUM + r'%を?回復', line)
+    m = re.search(r'ダメージの' + NUM + r'%を?回復', line)
     if m:
-        return {'op': 'lifesteal', 'value': float(m.group(1)), 'raw': line}
+        out = {'op': 'lifesteal', 'value': float(m.group(1)), 'raw': line}
+        dur = DURATION_RE.search(line)
+        out['duration'] = float(dur.group(1)) if dur else None
+        return out
 
     # ---- flat magazine ---------------------------------------------------
     m = re.search(r'最大装弾数(\d+)発▲', line)
@@ -520,7 +523,7 @@ def parse_effect(text, treasure):
     m = re.search(r'デバフ効果免疫(\d+)回', line)
     if m:
         return {'op': 'debuffImmune', 'value': float(m.group(1)), 'raw': line}
-    m = re.search(r'スキル発動者の最終最大HP' + NUM + r'%(?:→' + NUM + r'%)?の?.*?バリア', line)
+    m = re.search(r'スキル発動者の最終最大HPの?' + NUM + r'%(?:→' + NUM + r'%)?の?.*?バリア', line)
     if m:
         base = float(m.group(2)) if treasure and m.group(2) else float(m.group(1))
         out = {'op': 'shield', 'value': base, 'raw': line}
