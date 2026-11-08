@@ -1024,10 +1024,29 @@ window.Engine = (function () {
                 });
               }
             } else {
-              dealDamage(u, primary, frame, {
-                multiplierPct: weaponMult, chargeMult: chargeMult, rng: rng,
-              scale: scale, teamA: state.A, teamB: state.B
-              });
+              /* 貫通特化: 対象の後ろにいる敵にも同じ1発が当たる。
+               * widePierceTargetCount はデータにある分だけ使う（推測で広げない）。 */
+              var pierceN = u.char.widePierceTargetCount || 1;
+              var hitList = [primary];
+              if (pierceN > 1 && u.char.hasPenetration) {
+                var ordered = alive(enemies).slice().sort(function (a, b) { return a.pos - b.pos; });
+                var at = ordered.indexOf(primary);
+                if (at >= 0) {
+                  var dir = prefersRight(u) ? -1 : 1;
+                  for (var k = 1; k < pierceN; k++) {
+                    var nx = ordered[at + k * dir];
+                    if (!nx) break;
+                    hitList.push(nx);
+                  }
+                }
+              }
+              for (var hh = 0; hh < hitList.length; hh++) {
+                dealDamage(u, hitList[hh], frame, {
+                  multiplierPct: weaponMult, chargeMult: chargeMult, rng: rng,
+                  scale: scale, teamA: state.A, teamB: state.B,
+                  isPierce: hh > 0
+                });
+              }
             }
 
             // hit counters on the target side
