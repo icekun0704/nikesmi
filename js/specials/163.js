@@ -57,6 +57,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[163] = {
+    /* ナユタ：150%はここで実装 */
+    suppress: { skill1: [3] },
     init: function (u, E) {
       u.nyState = {
         absorb: 0,

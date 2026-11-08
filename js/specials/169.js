@@ -37,6 +37,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[169] = {
+    /* 1365.92% を10回順番に撃つ処理はここで実装している */
+    suppress: { burst: [0] },
     init: function (u, E) {
       st(u).decoy = true;   // 戦闘開始時のデコイ
     },

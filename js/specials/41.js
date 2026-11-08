@@ -15,6 +15,8 @@
  *     縮める手段が無い（state は API に公開されていない）。
  */
 (window.SPECIALS = window.SPECIALS || {})[41] = {
+    /* ベスティー：15.56%×2はここで実装 */
+    suppress: { burst: [0] },
   init: function (u, E) {
     /* スキル定義をこのユニット専用に複製する（SKILL_DB は全ユニット共有なので触らない） */
     var src = window.SKILL_DB && window.SKILL_DB[u.skillKey];

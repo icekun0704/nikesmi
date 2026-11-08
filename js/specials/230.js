@@ -20,6 +20,8 @@
  *     しまうため、開始時に消費すると仕様が壊れる）
  */
 (window.SPECIALS = window.SPECIALS || {})[230] = {
+  /* チェーンの本数ぶんの 50.06% はここで実装している */
+  suppress: { skill1: [2] },
   init: function (u, E) {
     u.mihara = {
       chains: 0,

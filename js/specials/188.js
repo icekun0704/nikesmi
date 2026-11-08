@@ -14,6 +14,8 @@
  *     ここで撃ち直す。
  */
 (window.SPECIALS = window.SPECIALS || {})[188] = {
+    /* エレグ：800%の連撃はここで実装 */
+    suppress: { burst: [0, 1] },
   init: function (u, E) {
     /* スキル定義をこのユニット専用に複製（SKILL_DB は共有なので書き換えない） */
     var src = window.SKILL_DB && window.SKILL_DB[u.skillKey];

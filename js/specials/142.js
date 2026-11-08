@@ -40,6 +40,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[142] = {
+    /* イヴ：457.14%×5はここで実装 */
+    suppress: { burst: [0] },
     init: function (u, E) {
       u.eveHitMark = 0;
     },

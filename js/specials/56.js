@@ -63,6 +63,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[56] = {
+    /* 3回/6回/9回の攻撃はここで数えているので、パーサ側は止める */
+    suppress: { skill1: [0, 1, 2] },
     init: function (u, E) {
       st(u);
     },

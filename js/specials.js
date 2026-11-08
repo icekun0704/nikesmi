@@ -919,6 +919,8 @@ window.SPECIALS = window.SPECIALS || {};
  */
 (function () {
   (window.SPECIALS = window.SPECIALS || {})[110] = {
+    /* サクラ：457.14%×9はここで実装 */
+    suppress: { burst: [0] },
     init: function (u, E) {
       u.skState = { dots: [] };
     },
@@ -3519,6 +3521,8 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[142] = {
+    /* イヴ：457.14%×5はここで実装 */
+    suppress: { burst: [0] },
     init: function (u, E) {
       u.eveHitMark = 0;
     },
@@ -3567,6 +3571,8 @@ window.SPECIALS = window.SPECIALS || {};
  */
 (function () {
   (window.SPECIALS = window.SPECIALS || {})[144] = {
+    /* 追加ダメージ分だけパーサ側を止め、ここで実装する */
+    suppress: { skill2: [1], burst: [1] },
     init: function (u, E) { u.julia = { crits: 0, stacks: 0, marcato: false }; },
 
     onShot: function (u, E, frame) {
@@ -4561,6 +4567,8 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[163] = {
+    /* ナユタ：150%はここで実装 */
+    suppress: { skill1: [3] },
     init: function (u, E) {
       u.nyState = {
         absorb: 0,
@@ -5120,6 +5128,8 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[169] = {
+    /* 1365.92% を10回順番に撃つ処理はここで実装している */
+    suppress: { burst: [0] },
     init: function (u, E) {
       st(u).decoy = true;   // 戦闘開始時のデコイ
     },
@@ -6842,6 +6852,8 @@ window.SPECIALS = window.SPECIALS || {};
  *     ここで撃ち直す。
  */
 (window.SPECIALS = window.SPECIALS || {})[188] = {
+    /* エレグ：800%の連撃はここで実装 */
+    suppress: { burst: [0, 1] },
   init: function (u, E) {
     /* スキル定義をこのユニット専用に複製（SKILL_DB は共有なので書き換えない） */
     var src = window.SKILL_DB && window.SKILL_DB[u.skillKey];
@@ -9553,6 +9565,8 @@ window.SPECIALS = window.SPECIALS || {};
  *     しまうため、開始時に消費すると仕様が壊れる）
  */
 (window.SPECIALS = window.SPECIALS || {})[230] = {
+  /* チェーンの本数ぶんの 50.06% はここで実装している */
+  suppress: { skill1: [2] },
   init: function (u, E) {
     u.mihara = {
       chains: 0,
@@ -11360,6 +11374,8 @@ window.SPECIALS = window.SPECIALS || {};
  *     縮める手段が無い（state は API に公開されていない）。
  */
 (window.SPECIALS = window.SPECIALS || {})[41] = {
+    /* ベスティー：15.56%×2はここで実装 */
+    suppress: { burst: [0] },
   init: function (u, E) {
     /* スキル定義をこのユニット専用に複製する（SKILL_DB は全ユニット共有なので触らない） */
     var src = window.SKILL_DB && window.SKILL_DB[u.skillKey];
@@ -12449,6 +12465,8 @@ function powerBloodStacks(u) {
   }
 
   (window.SPECIALS = window.SPECIALS || {})[56] = {
+    /* 3回/6回/9回の攻撃はここで数えているので、パーサ側は止める */
+    suppress: { skill1: [0, 1, 2] },
     init: function (u, E) {
       st(u);
     },
