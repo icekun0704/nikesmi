@@ -646,10 +646,14 @@ window.Engine = (function () {
   /* ---------------------------------------------------------------- combat */
   function fireBurst(u, team, enemies, frame, ctx) {
     u.bursts += 1;
+    var _spb = (window.SPECIALS || {})[u.id];
+    if (_spb && _spb.onBurst) _spb.onBurst(u, ctx.API, frame);
+
     if (u.swha) {
       u.swha.fullActive = 2;
       u.swha.maxLocks = 10;
       u.swha.maxRounds = 10;
+      u.chargeFixed = Math.round(3.2 * FPS);   // セブンスドワーフ・フルアクティブ
       buff(u, 'swha-full', 'chargeDmgPct', 528, 'up', frame + 60 * FPS, {});
     }
     runTriggered(u, team, enemies, frame, ctx, 'burst');
@@ -722,8 +726,39 @@ window.Engine = (function () {
     var bursts = [];
     var frame = 0;
 
+    /* 固有スキル用の窓口。js/specials/*.js はここだけを使って実装する。 */
+    var API = {
+      FPS: FPS,
+      team: function (u) { return u.side === 'A' ? A : B; },
+      enemies: function (u) { return u.side === 'A' ? B : A; },
+      alive: alive,
+      pickTarget: pickTarget,
+      slotsInRange: slotsInRange,
+      damage: function (u, t, fr, o) {
+        return dealDamage(u, t, fr, Object.assign({
+          rng: rng, scale: scale, teamA: state.A, teamB: state.B
+        }, o));
+      },
+      buff: buff,
+      heal: heal,
+      sumStat: sumStat,
+      atkEff: atkEff,
+      gauge: function (side, v) { state[side].gauge += v; },
+      event: function (obj) { events.push(obj); }
+    };
+    var SPECIALS = window.SPECIALS || {};
+    function specialOf(u) { return SPECIALS[u.id] || null; }
+
+    [A, B].forEach(function (team) {
+      team.forEach(function (u) {
+        var sp = specialOf(u);
+        if (sp && sp.init) sp.init(u, API);
+      });
+    });
+
     var ctx = {
       rng: rng,
+      API: API,
       scale: scale,
       teamA: state.A,
       teamB: state.B,
@@ -834,6 +869,16 @@ window.Engine = (function () {
         });
       });
 
+      // ---- 固有スキルの毎フレーム処理
+      [A, B].forEach(function (team) {
+        team.forEach(function (u) {
+          if (!u.alive) return;
+          u.now = frame;
+          var sp = specialOf(u);
+          if (sp && sp.tick) sp.tick(u, API, frame);
+        });
+      });
+
       // ---- スノーホワイト：ヘビーアームズのロックオン／装填
       [A, B].forEach(function (team) {
         var enemies = team === A ? B : A;
@@ -883,6 +928,8 @@ window.Engine = (function () {
           if (isFinite(u.firing.magazine) && u.magazineEff > 0) u.firing.magazine = u.magazineEff;
 
           var shot = Gauge.fireFiring(u.firing, frame);
+          // チャージ時間固定（スノーホワイト：HA / リバーレリオ など）
+          if (u.chargeFixed) u.firing.nextFrame = frame + u.chargeFixed;
           u.shots += 1;
           u.counters.attackShots += 1;
           u.counters.attackHits += shot.hits;
@@ -926,7 +973,10 @@ window.Engine = (function () {
             primary.counters.hitsTaken += shot.hits;
           }
 
-          // オートファイア: 装填数ぶん、ロックオン対象と全体に撃ち込む
+          var _sp = specialOf(u);
+          if (_sp && _sp.onShot) _sp.onShot(u, API, frame, shot);
+
+          // オートファイア: 装填数ぶん、ロックオン対象と全体に撃込む
           if (u.swha && u.swha.rounds > 0) {
             var st2 = u.swha;
             var r = st2.rounds;
@@ -951,7 +1001,11 @@ window.Engine = (function () {
             st2.locks = [];
             if (st2.fullActive > 0) {
               st2.fullActive -= 1;
-              if (st2.fullActive <= 0) { st2.maxLocks = 5; st2.maxRounds = 5; }
+              if (st2.fullActive <= 0) {
+                st2.maxLocks = 5;
+                st2.maxRounds = 5;
+                u.chargeFixed = Math.round(1.2 * FPS);
+              }
             }
           }
 
