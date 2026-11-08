@@ -252,7 +252,10 @@ window.Engine = (function () {
   }
 
   /* ------------------------------------------------------------- targeting */
-  function alive(team) { return team.filter(function (u) { return u.alive; }); }
+  /* HPが0になったユニットは、その場で行動できなくする。
+   * 死亡イベント自体はフレーム末尾でまとめて処理するので、alive フラグは
+   * そのままにして hp でも判定する（同フレーム内の撃ち合いの同時全滅を防ぐ）。 */
+  function alive(team) { return team.filter(function (u) { return u.alive && u.hp > 0; }); }
 
   /* 現在のアリーナの狙い方:
    *   SR は攻守どちらでも P5、それ以外（SG を含む）は P1。
@@ -738,14 +741,14 @@ window.Engine = (function () {
 
   function resolveChain(team, frame) {
     var masked = team.map(function (u) {
-      return (u && u.alive && u.burstReadyAt <= frame) ? u.char : null;
+      return (u && u.alive && u.hp > 0 && u.burstReadyAt <= frame) ? u.char : null;
     });
     var seq = null;
     try { seq = Gauge.burstSequence(masked); } catch (e) { seq = null; }
     if (!seq || !seq.length) return [];
     return seq.map(function (s) {
       return { unit: team[s.positionIndex], stage: s.stage };
-    }).filter(function (x) { return x.unit && x.unit.alive && x.unit.burstReadyAt <= frame; });
+    }).filter(function (x) { return x.unit && x.unit.alive && x.unit.hp > 0 && x.unit.burstReadyAt <= frame; });
   }
 
   function buildTeam(chars, side, opts) {
@@ -900,7 +903,7 @@ window.Engine = (function () {
                frame >= st.chainFrame + st.chainIndex * BURST_GAP) {
           var step = st.chain[st.chainIndex++];
           var bu = step.unit;
-          if (!bu || !bu.alive) continue;
+          if (!bu || !bu.alive || bu.hp <= 0) continue;
           bu.burstStageUsed = step.stage;
           fireBurst(bu, team, enemies, frame, ctx);
           bursts.push({ frame: frame, side: side, name: bu.name, pos: bu.pos, stage: step.stage });
