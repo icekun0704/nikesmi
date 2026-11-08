@@ -1,5 +1,5 @@
 /* Headless smoke test: node tools/test_engine.js */
-global.window = {};
+require('./_env');
 require('../js/data.js');
 require('../js/stat_data.js');
 require('../js/skills.js');

@@ -2,7 +2,7 @@
  *
  *   node tools/sweep.js [trials]
  */
-global.window = {};
+require('./_env');
 ['data', 'stat_data', 'skills', 'gauge', 'stats', 'cubes', 'specials', 'engine'].forEach(function (f) {
   try { require('../js/' + f + '.js'); } catch (e) { console.log('load fail', f, e.message); }
 });

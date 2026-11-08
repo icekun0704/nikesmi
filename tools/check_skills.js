@@ -5,7 +5,7 @@
  * パーサを触ったときに、静かに壊れやすい箇所を機械的に見つける。
  * ここが赤くなったままにしないこと。
  */
-global.window = {};
+require('./_env');
 require('../js/data.js');
 require('../js/skills.js');
 
