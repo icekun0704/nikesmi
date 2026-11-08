@@ -235,6 +235,18 @@ window.Engine = (function () {
         });
       });
     }
+    // 固有スキル側で実装しているブロックは、パーサ側の発動を止める
+    var sp = (window.SPECIALS || {})[char.id];
+    if (sp && sp.suppress) {
+      Object.keys(sp.suppress).forEach(function (slot) {
+        var state = u.skillState.filter(function (x) { return x.slot === slot; })[0];
+        if (!state) return;
+        sp.suppress[slot].forEach(function (idx) {
+          if (state.blocks[idx]) state.blocks[idx].skip = true;
+        });
+      });
+    }
+
     u.hpSeries = [[0, u.hp, u.coverHp]];
     return u;
   }
@@ -580,6 +592,7 @@ window.Engine = (function () {
       var skill = u.skills[sk.slot];
       for (var b = 0; b < sk.blocks.length; b++) {
         var bs = sk.blocks[b];
+        if (bs.skip) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== 'always' && trig.kind !== 'battleStart') continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
@@ -598,6 +611,7 @@ window.Engine = (function () {
       var skill = u.skills[sk.slot];
       for (var b = 0; b < sk.blocks.length; b++) {
         var bs = sk.blocks[b];
+        if (bs.skip) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== 'periodic') continue;
         var every = (trig.seconds || sk.ct || 20) * FPS;
@@ -632,6 +646,7 @@ window.Engine = (function () {
       var skill = u.skills[sk.slot];
       for (var b = 0; b < sk.blocks.length; b++) {
         var bs = sk.blocks[b];
+        if (bs.skip) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== kind) continue;
         if (!stageMatches(trig, stage, false)) continue;
@@ -650,6 +665,7 @@ window.Engine = (function () {
       var skill = u.skills[sk.slot];
       for (var b = 0; b < sk.blocks.length; b++) {
         var bs = sk.blocks[b];
+        if (bs.skip) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== 'counter' || trig.on !== on) continue;
         var n = trig.n || 1;
@@ -668,6 +684,7 @@ window.Engine = (function () {
       var skill = u.skills[sk.slot];
       for (var b = 0; b < sk.blocks.length; b++) {
         var bs = sk.blocks[b];
+        if (bs.skip) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== kind) continue;
         if (!stageMatches(trig, stage, isSelf === undefined ? true : isSelf)) continue;

@@ -49,6 +49,9 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[52] = {
+    /* スキル2の2秒ごとの手榴弾はここで実装しているので、パーサ側は止める */
+    suppress: { skill2: [0] },
+
     init: function (u, E) {
       u.ada = {
         patched: false,

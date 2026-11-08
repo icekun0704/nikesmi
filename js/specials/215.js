@@ -44,6 +44,9 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[215] = {
+    /* 5秒ごとの900%はここで実装しているので、パーサ側は止める */
+    suppress: { skill1: [2] },
+
     init: function (u, E) {
       var s = st(u);
       s.decoy = true;   // 戦闘開始時 デコイ

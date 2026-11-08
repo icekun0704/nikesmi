@@ -53,3 +53,19 @@ elementDmgPct / pierceDmgPct / ignoreDefDmgPct など）。
 パーサが解釈できた効果（数値バフ、回復、シールド、挑発、無敵、気絶、ダメージ）は
 `js/skills.js` 経由で自動的に動きます。**ここに書くのは、パーサで表現できない
 状態機械だけ**にしてください。二重計上に注意。
+
+## パーサ側の発動を止める
+
+パーサがある効果を解釈できるようになったぶん、こちらの実装と二重になることがあります。
+そのときは `suppress` でパーサ側のブロックを止めてください。
+
+```js
+(window.SPECIALS = window.SPECIALS || {})[52] = {
+  suppress: { skill2: [0] },   // skill2 の 0 番目のブロックを発動させない
+  init: function (u, E) { },
+  ...
+};
+```
+
+番号は `window.SKILL_DB[<orgId>].<skill>.blocks` の並び順です。値を書き換えたら
+`python -I tools/build_specials.py` で `js/specials.js` を作り直してください。

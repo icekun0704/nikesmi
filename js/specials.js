@@ -8378,6 +8378,9 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[215] = {
+    /* 5秒ごとの900%はここで実装しているので、パーサ側は止める */
+    suppress: { skill1: [2] },
+
     init: function (u, E) {
       var s = st(u);
       s.decoy = true;   // 戦闘開始時 デコイ
@@ -12091,6 +12094,9 @@ function powerBloodStacks(u) {
   }
 
   (window.SPECIALS = window.SPECIALS || {})[52] = {
+    /* スキル2の2秒ごとの手榴弾はここで実装しているので、パーサ側は止める */
+    suppress: { skill2: [0] },
+
     init: function (u, E) {
       u.ada = {
         patched: false,
