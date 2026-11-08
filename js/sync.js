@@ -550,7 +550,9 @@ window.SyncUI = (function () {
       window.SyncFetch.health().then(function (h) {
         if (!h) return;
         if (h.has_cookie === false) {
-          status('同期サーバーにログイン情報がありません', 'warn');
+          status('URL からの読み込みは準備中です。下の「うまくいかないとき」から取り込めます', 'warn');
+          var advs = document.querySelectorAll('.syncadv');
+          if (advs[1]) advs[1].open = true;
         }
       });
     }
