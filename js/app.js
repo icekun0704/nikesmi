@@ -40,7 +40,6 @@
     search: '',
     filters: { burst: {}, element: {}, classType: {} },
     ownedOnly: false,
-    liveCorrection: false,
     sort: 'power',
     zoom: 1,
     pan: 0,
@@ -770,14 +769,7 @@
     }
     var r = store.result;
     var pct = Math.round(r.winRate * 100);
-    var lp = store.liveCorrection ? liveProbability() : null;
-
-    if (lp != null) {
-      var lpc = Math.round(lp * 100);
-      if (lpc >= 55) { v.classList.add('win'); v.textContent = '勝ち ' + lpc + '%'; }
-      else if (lpc <= 45) { v.classList.add('lose'); v.textContent = '負け ' + (100 - lpc) + '%'; }
-      else { v.classList.add('even'); v.textContent = '互角 ' + lpc + '%'; }
-    } else if (pct >= 55) { v.classList.add('win'); v.textContent = '勝ち ' + pct + '%'; }
+    if (pct >= 55) { v.classList.add('win'); v.textContent = '勝ち ' + pct + '%'; }
     else if (pct <= 45) { v.classList.add('lose'); v.textContent = '負け ' + (100 - pct) + '%'; }
     else { v.classList.add('even'); v.textContent = '互角 ' + pct + '%'; }
 
@@ -789,8 +781,7 @@
       f.appendChild(vv);
       facts.appendChild(f);
     }
-    if (lp != null) fact('シミュレーション', pct + '%', ' ' + r.trials + '回試行');
-    else fact('勝率', pct + '%', ' ' + r.trials + '回試行');
+    fact('勝率', pct + '%', ' ' + r.trials + '回試行');
     fact('決着', (r.medianFrames / 60).toFixed(1), ' 秒');
     fact('残存', r.sample ? r.sample.survivors.A + ' — ' + r.sample.survivors.B : '—');
     var first = r.sample ? r.sample.bursts.filter(function (b) { return b.stage === 'B3'; })[0] : null;
@@ -799,53 +790,10 @@
     var killer = r.sample ? r.sample.events.filter(function (e) { return e.kind === 'death'; })[0] : null;
     fact('初回撃破', killer ? (killer.frame / 60).toFixed(1) : '—', killer ? ' 秒 ' + killer.unit : '');
 
-    if (lp != null) fact('実戦データ', Math.round(lp * 100) + '%', ' 過去の大会記録');
   }
 
   /* 過去の大会記録から推定した「その編成が勝ちやすいか」.
    * シミュレーションとは別物で、理由の説明はできない。 */
-  /* 過去の大会記録から学習した勝ちやすさ.
-   * キャラ単体＋ペア相性＋並び順。未知の対戦相手の組で66.6%の的中。 */
-  function liveProbability() {
-    var P = window.PREDICTOR;
-    if (P && P.characters) {
-      function score(team) {
-        var s = 0, ids = [];
-        team.forEach(function (e, pos) {
-          if (!e) return;
-          var id = String(e.charId);
-          ids.push(Number(e.charId));
-          s += P.characters[id] || 0;
-          s += P.positions[id + '#' + pos] || 0;
-        });
-        ids.sort(function (a, b) { return a - b; });
-        for (var i = 0; i < ids.length; i++) {
-          for (var j = i + 1; j < ids.length; j++) {
-            s += P.pairs[ids[i] + '_' + ids[j]] || 0;
-          }
-        }
-        return s;
-      }
-      var sa = score(store.teams.A), sb = score(store.teams.B);
-      if (!sa && !sb) return null;
-      return 1 / (1 + Math.exp(-(sa - sb)));
-    }
-    var R = window.RATINGS;
-    if (!R || !R.ratings) return null;
-    function simple(team) {
-      var s = 0;
-      team.forEach(function (e) {
-        if (!e) return;
-        var rec = R.ratings[String(e.charId)];
-        if (rec) s += rec.r;
-      });
-      return s;
-    }
-    var a = simple(store.teams.A), b = simple(store.teams.B);
-    if (!a && !b) return null;
-    return 1 / (1 + Math.exp(-(a - b) / (R.scale || 4)));
-  }
-
   /* --------------------------------------------------------------- events */
   function renderEvents() {
     var host = $('#eventlist');
@@ -1406,13 +1354,6 @@
 
     $('#sortBy').addEventListener('change', function (e) { store.sort = e.target.value; renderRoster(); });
 
-    var lc = $('#liveCorrection');
-    if (lc) lc.classList.toggle('on', store.liveCorrection);
-    if (lc) lc.addEventListener('click', function () {
-      store.liveCorrection = !store.liveCorrection;
-      lc.classList.toggle('on', store.liveCorrection);
-      renderVerdict();
-    });
 
     document.querySelectorAll('#editSeg .seg').forEach(function (b) {
       b.addEventListener('click', function () {
