@@ -80,6 +80,10 @@ window.Engine = (function () {
 
   function buff(u, key, stat, value, dir, until, opts) {
     opts = opts || {};
+    if (dir === 'down' && u.debuffImmuneLeft > 0 && !opts.ignoreImmune) {
+      u.debuffImmuneLeft -= 1;
+      return null;
+    }
     var found = null;
     for (var i = 0; i < u.buffs.length; i++) {
       if (u.buffs[i].key === key && u.buffs[i].stat === stat) { found = u.buffs[i]; break; }
@@ -346,7 +350,7 @@ window.Engine = (function () {
 
     var atk = atkEff(attacker);
     var def = defEff(target);
-    var base = opts.ignoreDef ? atk : Math.max(1, atk - def);
+    var base = (opts.ignoreDef || opts.noDef) ? atk : Math.max(1, atk - def);
 
     var critChance = CRIT_RATE + sumStat(attacker, 'critRate') / 100;
     var crit = opts.rng() < critChance;
@@ -543,6 +547,19 @@ window.Engine = (function () {
         for (var s = 0; s < targets.length; s++) {
           var sv = u.hpMax * effect.value / 100;
           targets[s].shield = Math.max(targets[s].shield, sv);
+        }
+        return;
+      }
+      case 'normalIgnoreDef': {
+        var ndur = effect.duration == null ? 10 : effect.duration;
+        for (var ni = 0; ni < targets.length; ni++) {
+          targets[ni].normalNoDefUntil = frame + Math.round(ndur * FPS);
+        }
+        return;
+      }
+      case 'debuffImmune': {
+        for (var di = 0; di < targets.length; di++) {
+          targets[di].debuffImmuneLeft = (targets[di].debuffImmuneLeft || 0) + (effect.value || 1);
         }
         return;
       }
@@ -1064,11 +1081,12 @@ window.Engine = (function () {
                   }
                 }
               }
+              var noDef = u.normalNoDefUntil > frame;
               for (var hh = 0; hh < hitList.length; hh++) {
                 dealDamage(u, hitList[hh], frame, {
                   multiplierPct: weaponMult, chargeMult: chargeMult, rng: rng,
                   scale: scale, teamA: state.A, teamB: state.B,
-                  isPierce: hh > 0
+                  isPierce: hh > 0, noDef: noDef
                 });
               }
             }

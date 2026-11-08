@@ -315,7 +315,9 @@ def parse_effect(text, treasure):
         return {'op': 'stat', 'stat': 'pierceRangePct', 'value': float(m.group(1)),
                 'dir': 'up', 'raw': line}
     if '通常攻撃を防御力無視ダメージとして適用' in line:
-        return {'op': 'normalIgnoreDef', 'raw': line}
+        m = DURATION_RE.search(line)
+        return {'op': 'normalIgnoreDef',
+                'duration': float(m.group(1)) if m else None, 'raw': line}
     if line.startswith('移動不可'):
         return {'op': 'root', 'raw': line}
     if line.startswith('スキル対象'):
