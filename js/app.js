@@ -31,6 +31,8 @@
   };
 
   /* ------------------------------------------------------------------ state */
+  var MAX_LEVEL = 1400;
+
   var store = {
     mode: 'champion',
     teams: { A: [null, null, null, null, null], B: [null, null, null, null, null] },
@@ -263,10 +265,10 @@
       lvWrap.className = 'lvwrap';
       lvWrap.appendChild(el('span', null, 'Lv'));
       var inp = document.createElement('input');
-      inp.type = 'number'; inp.min = 1; inp.max = 400;
+      inp.type = 'number'; inp.min = 1; inp.max = MAX_LEVEL;
       inp.value = store.teamLevel[side] || 400;
       inp.addEventListener('change', function () {
-        var v = Math.max(1, Math.min(400, parseInt(inp.value, 10) || 400));
+        var v = Math.max(1, Math.min(MAX_LEVEL, parseInt(inp.value, 10) || 400));
         inp.value = v;
         store.teamLevel[side] = v;
         persist(); renderAll(); scheduleSim();
@@ -571,7 +573,7 @@
 
     var g1 = el('div', 'fieldset');
     g1.appendChild(el('h4', null, '育成'));
-    var lvField = numField('レベル', s.level == null ? 400 : s.level, 1, 400, 1, function (v) {
+    var lvField = numField('レベル', s.level == null ? 400 : s.level, 1, MAX_LEVEL, 1, function (v) {
       s.level = mode.levelLocked ? 400 : v;
     });
     if (mode.levelLocked) {
@@ -1465,8 +1467,27 @@
     setSync: function (data) {
       store.sync = data;
       try { localStorage.setItem('nikesmi.sync.v1', JSON.stringify(data)); } catch (e) {}
+
+      // 取り込んだキャラのレベルをチームレベルに反映する（いちばん多いレベル）
+      var counts = {};
+      Object.keys(data.chars || {}).forEach(function (id) {
+        var lv = data.chars[id] && data.chars[id].stats && data.chars[id].stats.level;
+        if (lv > 0) counts[lv] = (counts[lv] || 0) + 1;
+      });
+      var best = 0, bestN = 0;
+      Object.keys(counts).forEach(function (lv) {
+        if (counts[lv] > bestN) { bestN = counts[lv]; best = Number(lv); }
+      });
+      if (best > 0) {
+        store.teamLevel.A = best;
+        store.teamLevel.B = best;
+        persist();
+      }
+
       renderRoster();
+      renderAll();
       window.Parties && renderPartySelects();
+      scheduleSim();
     }
   };
 })();
