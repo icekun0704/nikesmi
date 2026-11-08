@@ -181,6 +181,7 @@ button,select,input{font-family:inherit;font-size:inherit;color:inherit}
 .fact .k{font-size:9.5px;color:var(--fg-3);letter-spacing:.08em}
 .fact .v{font-family:var(--font-num);font-size:14px;font-variant-numeric:tabular-nums}
 .fact .v small{font-size:10px;color:var(--fg-3);font-family:var(--font-jp)}
+.caveat{margin-left:auto;font-size:10.5px;color:var(--fg-3);white-space:nowrap;flex:none}
 
 /* ------------------------------------------------------------------ roster */
 .rosterpane{display:flex;flex-direction:column;min-height:120px;background:var(--bg)}

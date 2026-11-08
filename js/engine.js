@@ -207,11 +207,11 @@ window.Engine = (function () {
   /* ------------------------------------------------------------- targeting */
   function alive(team) { return team.filter(function (u) { return u.alive; }); }
 
+  /* 現在のアリーナの狙い方:
+   *   SR は攻守どちらでも P5、それ以外（SG を含む）は P1。
+   * 2023年ごろの資料には「防衛側のSGはP5」とあるが、現在は統一されている。 */
   function prefersRight(u) {
-    var rule = u.char.targetRule;
-    if (!rule) return false;
-    var r = rule[u.fireSide] || rule.attack;
-    return r === '↖' || r === '↘';
+    return u.weapon === 'SR';
   }
 
   function pickTarget(u, enemies, frame) {
