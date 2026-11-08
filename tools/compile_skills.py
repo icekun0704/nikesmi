@@ -859,6 +859,10 @@ def parse_skill(infos, slot, ct, treasure):
               'excludeSelf': False, 'weapon': None, 'element': None, 'classType': None}),
             '')
         trigger = parse_trigger(trig_text if hdr else '', slot, ct)
+        # 「3回:」「6回:」のような発動回数の指定は、対象句より前に置かれる
+        m0 = re.match(r'^(\d+)回[：:]', hdr)
+        if m0 and trigger.get('kind') not in ('burst', 'periodic'):
+            trigger['nth'] = int(m0.group(1))
         # 条件が「、」より前に無い書き方（例: 対象が気絶状態→…なら同一の敵に）を
         # 条件なし扱いにしてしまうと、開幕に大ダメージが飛ぶ。必ず条件付きにする。
         if hdr and not trig_text and re.search(r'(なら|時|場合|のみ|状態)', hdr):
@@ -873,7 +877,10 @@ def parse_skill(infos, slot, ct, treasure):
         # 「自分に」「味方全体に」だけの行は、直前の条件を引き継ぐ。
         # 例: 「フルバーストタイムが発動した時、敵全体に」→「自分に」
         if trigger.get('kind') == 'always' and last_trigger[0] is not None                 and hdr and re.fullmatch(r'[^、]{1,20}に', hdr)                 and not re.search(r'(時|なら|場合|のみ|状態)', hdr):
+            nth = trigger.get('nth')
             trigger = dict(last_trigger[0])
+            if nth:
+                trigger['nth'] = nth
         elif trigger.get('kind') not in ('always', 'battleStart', 'unknown', 'periodic'):
             last_trigger[0] = dict(trigger)
         conds = parse_condition(hdr)

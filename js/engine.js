@@ -610,6 +610,13 @@ window.Engine = (function () {
   }
 
   /* バースト段階が指定されているブロックは、その段階のときだけ発動する */
+  /* 「3回:」のように回数が指定されたブロックは、その回数ごとに1度だけ発動する */
+  function nthOk(bs, trig) {
+    if (!trig.nth) return true;
+    bs.nthCount = (bs.nthCount || 0) + 1;
+    return bs.nthCount % trig.nth === 0;
+  }
+
   function stageMatches(trig, stage, isSelf) {
     if (trig.stage == null) return true;
     if (stage == null) return false;
@@ -630,6 +637,7 @@ window.Engine = (function () {
         if (!stageMatches(trig, stage, false)) continue;
         if (trig.chance != null && ctx.rng() * 100 > trig.chance) continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
+        if (!nthOk(bs, trig)) continue;
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
       }
     }
@@ -647,6 +655,7 @@ window.Engine = (function () {
         var n = trig.n || 1;
         if (u.counters[on] % n !== 0) continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
+        if (!nthOk(bs, trig)) continue;
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
       }
     }
@@ -663,6 +672,7 @@ window.Engine = (function () {
         if (trig.kind !== kind) continue;
         if (!stageMatches(trig, stage, isSelf === undefined ? true : isSelf)) continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
+        if (!nthOk(bs, trig)) continue;
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
       }
     }
