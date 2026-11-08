@@ -87,7 +87,14 @@ def main():
     print('未着手          %d 形態' % len(missing_chars))
     missing_chars.sort(key=lambda r: -(r[1] * 3 + r[2]))
     out = []
+    ARENA_NA = {
+        'アンカー': '破壊可能な発射体がアリーナに無い',
+        'ライ': '自分のデコイが条件。範囲攻撃は防げない',
+        'マリ': 'コアヒットがアリーナに無い',
+    }
     for name, bad, unk in missing_chars:
+        if name in ARENA_NA:
+            continue
         out.append('  %-24s 未解釈 %2d / 不明 %2d' % (name, bad, unk))
     io.open(os.path.join(APP, '_report.txt'), 'w', encoding='utf-8').write(chr(10).join(out))
     print('')

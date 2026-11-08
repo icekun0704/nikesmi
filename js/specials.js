@@ -3553,6 +3553,54 @@ window.SPECIALS = window.SPECIALS || {};
   };
 })();
 
+/* ---- 144.js ---- */
+/* ジュリア（宝物） (id 144 / org 96)
+ *
+ * クリティカル命中の回数で進む2つの効果。
+ *   通常攻撃が6回クリティカル命中した時、自分に
+ *     クレッシェンド（クリティカルダメージ24.79%▲）：5スタックまで：15秒
+ *   通常攻撃が8回クリティカル命中した時、対象に
+ *     マルカート：最終攻撃力の88% の追加ダメージ
+ *   マルカートがクリティカル命中した時、同じ敵に
+ *     最終攻撃力の100% の追加ダメージ
+ *   バースト時、クレッシェンドがフルスタックなら同じ敵に 544.5% を追加
+ */
+(function () {
+  (window.SPECIALS = window.SPECIALS || {})[144] = {
+    init: function (u, E) { u.julia = { crits: 0, stacks: 0, marcato: false }; },
+
+    onShot: function (u, E, frame) {
+      var st = u.julia;
+      if (!u._lastCrit) return;
+      st.crits += 1;
+      var t = u._lastTarget;
+      if (!t || !t.alive) return;
+
+      // マルカートがクリティカル命中した時、さらに100%
+      if (st.marcato) {
+        st.marcato = false;
+        E.damage(u, t, frame, { multiplierPct: 100 });
+      }
+
+      if (st.crits % 6 === 0 && st.stacks < 5) {
+        st.stacks += 1;
+        E.buff(u, 'julia-cresc', 'critDmgPct', 24.79 * st.stacks, 'up', frame + 15 * E.FPS);
+      }
+      if (st.crits % 8 === 0) {
+        st.marcato = true;
+        E.damage(u, t, frame, { multiplierPct: 88 });
+      }
+    },
+
+    onBurst: function (u, E, frame) {
+      if (u.julia.stacks < 5) return;
+      var t = E.pickTarget(u, frame);
+      if (!t) return;
+      E.damage(u, t, frame, { multiplierPct: 544.5 });
+    }
+  };
+})();
+
 /* ---- 145.js ---- */
 /* プリバティ（宝物）(id 145, AR, B3, 火力型, 宝物)
  *
@@ -6148,6 +6196,35 @@ window.SPECIALS = window.SPECIALS || {};
     onShot: function (u, E, frame, shot) { },
     onBurst: function (u, E, frame) {
       if (u.burstStageUsed === 'B3') u.rhBombUntil = frame + 10 * E.FPS;
+    }
+  };
+})();
+
+/* ---- 182.js ---- */
+/* レム (id 182 / org 115)
+ *
+ * スキル1の条件「自分が鬼の気状態なら」が読めず、15回命中の効果が発動しない。
+ * 鬼の気はバーストで自分に付く（クリティカル確率37.8%▲：10秒）。
+ * バースト後10秒のあいだだけ、通常攻撃15回ごとに攻撃力4.22%を30スタックまで積む。
+ */
+(function () {
+  (window.SPECIALS = window.SPECIALS || {})[182] = {
+    init: function (u, E) { u.rem = { oniUntil: -1, hits: 0, stacks: 0 }; },
+
+    onBurst: function (u, E, frame) {
+      u.rem.oniUntil = frame + 10 * E.FPS;
+      u.rem.hits = 0;
+      u.rem.stacks = 0;
+    },
+
+    onShot: function (u, E, frame) {
+      var st = u.rem;
+      if (frame > st.oniUntil) return;
+      st.hits += 1;
+      if (st.hits % 15 !== 0) return;
+      if (st.stacks >= 30) return;
+      st.stacks += 1;
+      E.buff(u, 'rem-oni', 'atkPct', 4.22 * st.stacks, 'up', frame + 10 * E.FPS);
     }
   };
 })();
@@ -8910,6 +8987,51 @@ window.SPECIALS = window.SPECIALS || {};
         E.buff(a, prefix + ':def', 'defFlat', def, 'up', Infinity, {});
       }
       E.event({ frame: frame, kind: 'aigis-buff', side: u.side, unit: u.name });
+    }
+  };
+})();
+
+/* ---- 224.js ---- */
+/* クイーン（真） (id 224 / org 197)
+ *
+ * 「1more」が彼女の本体。
+ *   バーストで対象が風圧コードなら、自分に 1more（攻撃力30.27%▲）が付く。
+ *   1more が適用された時、敵全体に 最終攻撃力の548.99% の分配ダメージ。
+ *   同じく1moreが適用された時、自分を除く基本バースト段階3の味方全体に
+ *   攻撃力35.2%▲（3スタック）。
+ *
+ * 追撃も同じ548.99%だが、アリーナで追撃を配る手段が無いため実装しない。
+ */
+(function () {
+  var ONEMORE_DMG = 548.99;
+  var ONEMORE_ATK = 30.27;
+  var ALLY_ATK = 35.2;
+
+  (window.SPECIALS = window.SPECIALS || {})[224] = {
+    init: function (u, E) { u.queen = { done: false }; },
+
+    onBurst: function (u, E, frame) {
+      // 対象（＝いま狙っている敵）が風圧コードなら1moreが付く
+      var t = E.pickTarget(u, frame);
+      if (!t || t.element !== '風圧') return;
+
+      E.buff(u, 'queen-1more', 'atkPct', ONEMORE_ATK, 'up', frame + 10 * E.FPS);
+
+      // 1more適用時：敵全体に分配ダメージ
+      var es = E.alive(E.enemies(u));
+      for (var i = 0; i < es.length; i++) {
+        E.damage(u, es[i], frame, { multiplierPct: ONEMORE_DMG, isDistributed: true });
+      }
+
+      // 1more適用時：基本バースト段階3の味方全体に攻撃力35.2%（3スタック）
+      var team = E.team(u);
+      for (var j = 0; j < team.length; j++) {
+        var a = team[j];
+        if (a === u || !a.alive) continue;
+        var st = String(a.char && a.char.burstStage || '');
+        if (!/B3/.test(st)) continue;
+        E.buff(a, 'queen-baton-' + a.pos, 'atkPct', ALLY_ATK, 'up', frame + 10 * E.FPS);
+      }
     }
   };
 })();
@@ -14570,6 +14692,80 @@ function powerBloodStacks(u) {
   };
 })();
 
+/* ---- 85.js ---- */
+/* ファントム (id 85 / org 133)
+ *
+ * 予告状と怪盗の短剣。
+ *
+ *  通常攻撃が命中した時、対象が予告状状態でなければ
+ *    ・対象に 予告状（防御力32.19%▼）：5秒
+ *    ・自分に 怪盗の短剣（命中率25.75%▲）：3スタック：5秒
+ *  通常攻撃が命中した時、対象が予告状状態なら
+ *    ・自分に 攻撃ダメージ75.17%▲：1発
+ *  怪盗の短剣が3スタック（フル）になったら、スタックを解除して
+ *    ・予告状状態の対象に 最終攻撃力の84.33% の追加ダメージ
+ *    ・敵全体に 最終攻撃力の250% の分配ダメージ
+ *
+ * 命中率はアリーナでは効かないが、スタックの進行に必要なので数だけ数える。
+ */
+(function () {
+  var MARK = 'fantome-mark:';
+  (window.SPECIALS = window.SPECIALS || {})[85] = {
+    init: function (u, E) { u.fantome = { stacks: 0, marked: [] }; },
+
+    onShot: function (u, E, frame) {
+      var st = u.fantome;
+      var t = u._lastTarget;
+      if (!t || !t.alive) return;
+
+      var isMarked = st.marked.indexOf(t) >= 0;
+
+      if (!isMarked) {
+        st.marked.push(t);
+        E.buff(t, MARK + u.pos + ':' + t.pos, 'defPct', 32.19, 'down', frame + 5 * E.FPS);
+        st.stacks = Math.min(3, st.stacks + 1);
+        E.buff(u, 'fantome-knife', 'hitRate', 25.75, 'up', frame + 5 * E.FPS);
+        // 予告状は5秒で切れるので、切れたら解除扱いにする
+        setTimeoutMark(st, t, frame + 5 * E.FPS);
+      } else {
+        E.buff(u, 'fantome-dmg', 'atkDmgPct', 75.17, 'up', frame + 1);
+        st.stacks = Math.min(3, st.stacks + 1);
+      }
+
+      if (st.stacks >= 3) {
+        st.stacks = 0;
+        // フルスタック解除：予告状の対象に追加ダメージ、敵全体に分配ダメージ
+        var markedAlive = st.marked.filter(function (x) { return x.alive; });
+        if (markedAlive.length) {
+          E.damage(u, markedAlive[0], frame, { multiplierPct: 84.33 });
+        }
+        var es = E.alive(E.enemies(u));
+        for (var i = 0; i < es.length; i++) {
+          E.damage(u, es[i], frame, { multiplierPct: 250, isDistributed: true });
+        }
+        E.buff(u, 'fantome-dist', 'distributedDmgPct', 12.86, 'up', frame + 10 * E.FPS);
+      }
+    },
+
+    tick: function (u, E, frame) {
+      var st = u.fantome;
+      if (!st.expiries) return;
+      for (var i = st.expiries.length - 1; i >= 0; i--) {
+        if (frame >= st.expiries[i].until) {
+          var idx = st.marked.indexOf(st.expiries[i].target);
+          if (idx >= 0) st.marked.splice(idx, 1);
+          st.expiries.splice(i, 1);
+        }
+      }
+    }
+  };
+
+  function setTimeoutMark(st, target, until) {
+    st.expiries = st.expiries || [];
+    st.expiries.push({ target: target, until: until });
+  }
+})();
+
 /* ---- 89.js ---- */
 /* ルージュ (89 / org 132)
  *
@@ -14965,6 +15161,55 @@ function powerBloodStacks(u) {
   };
 })();
 
+/* ---- 92.js ---- */
+/* クエンシー：エスケープクイーン (id 92 / org 134)
+ *
+ * ルート探索の3段階。
+ *   通常攻撃2回ごとに、いまの段階のスタックを積む
+ *     1段階: 命中率1.36% / 攻撃力2.45% を10スタックまで（2秒）
+ *     2段階: 命中率2.71% / 攻撃力4.9% を10スタックまで（1秒）
+ *     3段階: 命中率4.08% / 攻撃力7.36% を 5スタックまで（0.5秒）
+ *   フルスタックになると次の段階へ進み、その段階の常時効果を得る
+ *     1段階フル: 分配ダメージ49.58%
+ *     2段階フル: コアダメージ25.25%（アリーナにコアは無いので実質なし）
+ *     3段階フル: クリティカル確率16.73%
+ */
+(function () {
+  var TIERS = [
+    { hr: 1.36, atk: 2.45, max: 10, dur: 2.0, full: { stat: 'distributedDmgPct', value: 49.58 } },
+    { hr: 2.71, atk: 4.90, max: 10, dur: 1.0, full: { stat: 'coreDmgPct', value: 25.25 } },
+    { hr: 4.08, atk: 7.36, max: 5,  dur: 0.5, full: { stat: 'critRate', value: 16.73 } }
+  ];
+
+  (window.SPECIALS = window.SPECIALS || {})[92] = {
+    init: function (u, E) { u.quencey = { attacks: 0, tier: 0, stacks: 0, done: [false, false, false] }; },
+
+    onShot: function (u, E, frame) {
+      var st = u.quencey;
+      st.attacks += 1;
+      if (st.attacks % 2 !== 0) return;
+      if (st.tier >= TIERS.length) return;
+
+      var t = TIERS[st.tier];
+      st.stacks += 1;
+
+      // スタックぶんのバフ（同じキーで上書きして持続だけ更新）
+      E.buff(u, 'q-hr', 'hitRate', t.hr * st.stacks, 'up', frame + Math.round(t.dur * E.FPS));
+      E.buff(u, 'q-atk', 'atkPct', t.atk * st.stacks, 'up', frame + Math.round(t.dur * E.FPS));
+
+      if (st.stacks >= t.max) {
+        // フルスタック：段階の常時効果を得て、次の段階へ
+        if (!st.done[st.tier]) {
+          st.done[st.tier] = true;
+          E.buff(u, 'q-full-' + st.tier, t.full.stat, t.full.value, 'up', Infinity);
+        }
+        st.tier += 1;
+        st.stacks = 0;
+      }
+    }
+  };
+})();
+
 /* ---- 94.js ---- */
 /* ベロータ (id 94 / org 67, RL, B2, 火力型, 電撃)
  *
@@ -15087,4 +15332,54 @@ function powerBloodStacks(u) {
                 feathers: s.feathers });
     }
   };
+})();
+
+/* ---- 99.js ---- */
+/* エクシア (id 99 / org 18)
+ *
+ * ハッキングコード収集。
+ *   最後の弾丸（またはフルチャージ攻撃）が命中した時、自分に
+ *     ハッキングコード収集：攻撃力16.8%→28%▲：5スタック：15秒
+ *   その状態で最後の弾丸が命中した時、対象に 攻撃力13.77%▼ / 防御力13.77%▼
+ *
+ * 最後の弾丸かどうかは、装弾が尽きた直後の1発で判定する。
+ */
+(function () {
+  (window.SPECIALS = window.SPECIALS || {})[99] = {
+    init: function (u, E) { u.exia = { stacks: 0, until: -1, charged: false }; },
+
+    onShot: function (u, E, frame) {
+      var st = u.exia;
+      var last = shot_is_last(u);
+
+      if (last) {
+        st.stacks = Math.min(5, st.stacks + 1);
+        st.until = frame + 15 * E.FPS;
+        st.charged = true;
+        E.buff(u, 'exia-hack', 'atkPct', 16.8 + (st.stacks >= 5 ? 11.2 : 0), 'up', st.until);
+      } else if (st.charged && frame <= st.until) {
+        // 状態中は対象の攻撃力・防御力を下げる
+        var t = u._lastTarget;
+        if (t && t.alive) {
+          E.buff(t, 'exia-down-atk-' + u.pos + ':' + t.pos, 'atkPct', 13.77, 'down', frame + 5 * E.FPS);
+          E.buff(t, 'exia-down-def-' + u.pos + ':' + t.pos, 'defPct', 13.77, 'down', frame + 5 * E.FPS);
+        }
+      }
+    },
+
+    tick: function (u, E, frame) {
+      if (u.exia.until > 0 && frame > u.exia.until) {
+        u.exia.until = -1;
+        u.exia.stacks = 0;
+        u.exia.charged = false;
+      }
+    }
+  };
+
+  /* 装弾が尽きた直後の1発（発射前に判定するので残弾1で真） */
+  function shot_is_last(u) {
+    var f = u.firing;
+    if (!isFinite(f.magazine) || f.magazine <= 0) return false;
+    return f.shotsInMagazine >= f.magazine - 1;
+  }
 })();

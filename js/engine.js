@@ -336,6 +336,7 @@ window.Engine = (function () {
     var critChance = CRIT_RATE + sumStat(attacker, 'critRate') / 100;
     var crit = opts.rng() < critChance;
 
+    attacker._lastCrit = crit;
     var bonus = 1;
     if (crit) bonus += CRIT_DMG + sumStat(attacker, 'critDmgPct') / 100;
     if (attacker.side === 'A' ? opts.teamA.fullBurst : opts.teamB.fullBurst) bonus += FB_BONUS;

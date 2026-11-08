@@ -1,5 +1,5 @@
 characters 206  forms 412
-blocks 2299  effects 3175  unparsed 433 (13.6%)
+blocks 2299  effects 3173  unparsed 431 (13.6%)
 triggers: {"counter": 228, "fullBurst": 172, "burst": 797, "unknown": 409, "periodic": 111, "fullChargeShot": 136, "always": 89, "hitTaken": 12, "attack": 29, "lastBullet": 54, "battleStart": 146, "enemyDeath": 8, "allyBurst": 2, "selfHpBelow": 8, "burstStage": 36, "fullBurstEnd": 42, "never": 18, "reload": 2}
 
 --- unparsed samples ---
