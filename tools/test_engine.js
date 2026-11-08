@@ -49,3 +49,25 @@ console.log('deaths', r.events.filter(e => e.kind === 'death').map(e => e.unit +
 const u = r.teams.A[0];
 console.log('unit0', u.name, 'hp', Math.round(u.hp), '/', u.hpMax, 'dmgDealt', Math.round(u.damageDealt), 'shots', u.shots);
 console.log('hpRatio', r.hpRatio);
+
+/* ---- バースト速度の回帰チェック ----
+ * 参照実装（work/charge_sim.js --region global）と 1 フレーム以内で一致すること。
+ *   gateway 152F で満タン -> B1 178F / B2 210F / B3 242F
+ * ここがずれたら、ゲージかスケジュールのどちらかを壊している。
+ */
+const ref = window.Engine.run(T1, T2, { seed: 7 });
+const own = ref.bursts.filter(b => b.side === 'A').slice(0, 3).map(b => b.frame);
+const expect = [178, 210, 242];
+let drift = 0;
+if (own.length >= 3) {
+  for (let i = 0; i < 3; i++) drift = Math.max(drift, Math.abs(own[i] - expect[i]));
+}
+if (own.length < 3) {
+  console.log('\n[NG] バーストが3段階そろっていません:', own);
+  process.exitCode = 1;
+} else if (drift > 1) {
+  console.log('\n[NG] バースト速度が参照実装から ' + drift + 'F ずれています:', own, '期待', expect);
+  process.exitCode = 1;
+} else {
+  console.log('\n[OK] バースト速度 参照実装との差 ' + drift + 'F (' + own.join(', ') + ')');
+}
