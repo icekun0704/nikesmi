@@ -295,7 +295,7 @@ button,select,input{font-family:inherit;font-size:inherit;color:inherit}
 #zoomLabel{font-family:var(--font-num);font-size:10.5px;color:var(--fg-3);min-width:38px;text-align:center}
 .stagebody{display:flex;min-height:0}
 .canvaswrap{position:relative;flex:1;height:118px;min-width:0}
-.stage.open .stagebody{height:min(40vh,380px)}
+.stage.open .stagebody{height:min(36vh,340px)}
 .stage.open .canvaswrap{height:auto}
 #tl{display:block;width:100%;height:100%;cursor:ew-resize}
 .eventpane{

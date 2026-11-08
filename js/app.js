@@ -703,7 +703,14 @@
     }
     var r = store.result;
     var pct = Math.round(r.winRate * 100);
-    if (pct >= 55) { v.classList.add('win'); v.textContent = '勝ち ' + pct + '%'; }
+    var lp = store.liveCorrection ? liveProbability() : null;
+
+    if (lp != null) {
+      var lpc = Math.round(lp * 100);
+      if (lpc >= 55) { v.classList.add('win'); v.textContent = '勝ち ' + lpc + '%'; }
+      else if (lpc <= 45) { v.classList.add('lose'); v.textContent = '負け ' + (100 - lpc) + '%'; }
+      else { v.classList.add('even'); v.textContent = '互角 ' + lpc + '%'; }
+    } else if (pct >= 55) { v.classList.add('win'); v.textContent = '勝ち ' + pct + '%'; }
     else if (pct <= 45) { v.classList.add('lose'); v.textContent = '負け ' + (100 - pct) + '%'; }
     else { v.classList.add('even'); v.textContent = '互角 ' + pct + '%'; }
 
@@ -715,7 +722,8 @@
       f.appendChild(vv);
       facts.appendChild(f);
     }
-    fact('勝率', pct + '%', ' ' + r.trials + '回試行');
+    if (lp != null) fact('シミュレーション', pct + '%', ' ' + r.trials + '回試行');
+    else fact('勝率', pct + '%', ' ' + r.trials + '回試行');
     fact('決着', (r.medianFrames / 60).toFixed(1), ' 秒');
     fact('残存', r.sample ? r.sample.survivors.A + ' — ' + r.sample.survivors.B : '—');
     var first = r.sample ? r.sample.bursts.filter(function (b) { return b.stage === 'B3'; })[0] : null;
@@ -724,10 +732,7 @@
     var killer = r.sample ? r.sample.events.filter(function (e) { return e.kind === 'death'; })[0] : null;
     fact('初回撃破', killer ? (killer.frame / 60).toFixed(1) : '—', killer ? ' 秒 ' + killer.unit : '');
 
-    if (store.liveCorrection) {
-      var lp = liveProbability();
-      if (lp != null) fact('実戦データ', Math.round(lp * 100) + '%', ' 過去の大会記録');
-    }
+    if (lp != null) fact('実戦データ', Math.round(lp * 100) + '%', ' 過去の大会記録');
   }
 
   /* 過去の大会記録から推定した「その編成が勝ちやすいか」.
