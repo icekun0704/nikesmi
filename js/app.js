@@ -39,7 +39,7 @@
     search: '',
     filters: { burst: {}, element: {}, classType: {} },
     ownedOnly: false,
-    liveCorrection: false,
+    liveCorrection: true,
     sort: 'power',
     zoom: 1,
     pan: 0,
@@ -1343,6 +1343,7 @@
     $('#sortBy').addEventListener('change', function (e) { store.sort = e.target.value; renderRoster(); });
 
     var lc = $('#liveCorrection');
+    if (lc) lc.classList.toggle('on', store.liveCorrection);
     if (lc) lc.addEventListener('click', function () {
       store.liveCorrection = !store.liveCorrection;
       lc.classList.toggle('on', store.liveCorrection);

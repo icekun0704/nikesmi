@@ -39,3 +39,11 @@ window.COVER_HP_RATIO = window.COVER_HP_RATIO == null ? 0.35 : window.COVER_HP_R
  * 同梱の tools/cloudflare-worker.js を Cloudflare Workers に置くと、そのURLになる。
  */
 window.SYNC_PROXY = window.SYNC_PROXY || '';
+
+/* 戦闘のテンポ.
+ *
+ * ダメージ式そのものは資料どおりだが、そのままだと最初のフルバーストで
+ * 決着がついてしまい、実戦（20〜30秒・バースト3〜4回）より短くなる。
+ * 実戦のテンポに合わせるための係数。1.0 で資料どおりの式。
+ */
+window.DAMAGE_SCALE = window.DAMAGE_SCALE == null ? 0.35 : window.DAMAGE_SCALE;

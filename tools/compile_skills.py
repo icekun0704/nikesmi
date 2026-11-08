@@ -663,6 +663,9 @@ def parse_target(header):
     if cm:
         cls = cm.group(1)
 
+    if '攻撃範囲内' in t:
+        sel = 'range'
+
     if side is None and '対象' in t:
         side = 'enemy'
         sel = 'primary'

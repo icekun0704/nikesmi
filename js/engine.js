@@ -363,6 +363,13 @@ window.Engine = (function () {
   function resolveTargets(u, spec, team, enemies, rng, frame) {
     var pool;
     if (spec.side === 'self') return [u];
+    if (spec.sel === 'range') {
+      // 「攻撃範囲内」= 武器の爆風が届く範囲。全体ではない。
+      var rp = pickTarget(u, enemies, frame);
+      if (!rp) return [];
+      var rr = (u.char.rlExplosionRange == null ? 1 : u.char.rlExplosionRange);
+      return slotsInRange(enemies, rp.pos, rr);
+    }
     if (spec.sel === 'primary') {
       // 「対象に」= そのとき通常攻撃で狙っている相手
       var pt = pickTarget(u, enemies, frame);
@@ -632,7 +639,9 @@ window.Engine = (function () {
     opts = opts || {};
     var rng = mulberry32(opts.seed || 1);
     var maxFrames = opts.maxFrames || DEFAULT_MAX_FRAMES;
-    var scale = opts.damageScale == null ? 1 : opts.damageScale;
+    var scale = opts.damageScale == null
+      ? (window.DAMAGE_SCALE == null ? 1 : window.DAMAGE_SCALE)
+      : opts.damageScale;
 
     var anisA = teamA.filter(function (c) { return c && c.enName === 'Anis: Star'; })[0];
     var anisB = teamB.filter(function (c) { return c && c.enName === 'Anis: Star'; })[0];
