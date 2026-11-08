@@ -22,3 +22,12 @@
 
   window.PORTRAIT_BASE = window.PORTRAIT_BASE || fromQuery || saved || 'assets/portraits/';
 })();
+
+/* 遮蔽物のHP（ニケの基礎HPに対する比率）.
+ *
+ * 遮蔽物は「射撃していないあいだ身を隠す板」で、実質もう一本のHPバーです。
+ * 単体攻撃はまずここが受け、バーストの範囲攻撃は貫通します。
+ * レベル400での実数値は公開されていないため比率で持ちます。
+ * 初期値1.0は「遮蔽物のHPはニケの最大HPとほぼ同じ」というコミュニティの実測にもとづきます。
+ */
+window.COVER_HP_RATIO = window.COVER_HP_RATIO == null ? 1.0 : window.COVER_HP_RATIO;

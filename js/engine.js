@@ -153,6 +153,11 @@ window.Engine = (function () {
       hp: Math.round(st.hp * mul),
       skillScale: cfg.skillScale || null,
       shield: 0,
+      /* 遮蔽物は「射撃していないあいだ身を隠す板」で、実質もう一本のHPバー。
+       * 単体攻撃はまず遮蔽物が受け、バーストの範囲攻撃は貫通する。
+       * レベル400の実数値は公開されていないため、基礎HPに対する比率で持つ。 */
+      coverHp: Math.round(st.hp * (window.COVER_HP_RATIO == null ? 1.0 : window.COVER_HP_RATIO)),
+      coverMax: Math.round(st.hp * (window.COVER_HP_RATIO == null ? 1.0 : window.COVER_HP_RATIO)),
       alive: true,
       deathFrame: -1,
       now: 0,
@@ -254,6 +259,15 @@ window.Engine = (function () {
     }
 
     var remaining = amount;
+
+    // 遮蔽物: 範囲バーストは貫通し、単体攻撃はまず遮蔽物が受ける
+    if (!ctx.piercesCover && target.coverHp > 0) {
+      var eaten = Math.min(target.coverHp, remaining);
+      target.coverHp -= eaten;
+      remaining -= eaten;
+      if (remaining <= 0) return 0;
+    }
+
     if (target.shield > 0) {
       var absorbed = Math.min(target.shield, remaining);
       target.shield -= absorbed;
@@ -315,7 +329,8 @@ window.Engine = (function () {
 
     var dmg = base * (opts.multiplierPct / 100) * bonus * element * charge * (1 + up / 100) * taken;
     dmg *= opts.scale == null ? 1 : opts.scale;
-    return applyDamage(target, dmg, attacker, frame, opts);
+    return applyDamage(target, dmg, attacker, frame,
+      Object.assign({ piercesCover: !!opts.isBurst || !!opts.ignoreDef }, opts));
   }
 
   function heal(u, amount, frame) {
