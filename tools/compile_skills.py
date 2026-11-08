@@ -682,6 +682,23 @@ def parse_target(header):
     }, trig_text
 
 
+BURST_ROMAN = {'Ⅰ': 1, 'Ⅱ': 2, 'Ⅲ': 3, '1': 1, '2': 2, '3': 3,
+               'I': 1, 'II': 2, 'III': 3}
+
+
+def burst_stage_trigger(text):
+    """Return (stage, ally) when the header is scoped to a burst stage."""
+    m = re.match(r'^(自分が|自分に|味方が|味方に)?バースト\s*([ⅠⅡⅢ123])\s*'
+                 r'(?:で使用時|を使用した時|使用時|で使用した時)', text)
+    if not m:
+        return None
+    stage = BURST_ROMAN.get(m.group(2))
+    if stage is None:
+        return None
+    ally = bool(m.group(1)) and m.group(1).startswith('味方')
+    return (stage, ally)
+
+
 def parse_trigger(text, slot, ct):
     """Header text -> trigger descriptor."""
     t = text.strip()
@@ -694,6 +711,14 @@ def parse_trigger(text, slot, ct):
 
     # strip leading "N回目：" "効果N：" etc
     t = re.sub(r'^(?:\d+回目|\d+回|効果\d+|第\d+)(?:[：:])', '', t).strip()
+
+    # "バーストⅡで使用時" / "自分がバーストⅡを使用した時" -> その段階で発動
+    stage = burst_stage_trigger(t)
+    if stage is not None:
+        trig = {'kind': 'burstStage', 'stage': stage[0]}
+        if stage[1]:
+            trig['ally'] = True
+        return trig
 
     if slot == 'burst':
         return {'kind': 'burst'}

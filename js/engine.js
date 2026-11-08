@@ -609,7 +609,16 @@ window.Engine = (function () {
     }
   }
 
-  function runEventSkills(u, team, enemies, frame, ctx, kind) {
+  /* バースト段階が指定されているブロックは、その段階のときだけ発動する */
+  function stageMatches(trig, stage, isSelf) {
+    if (trig.stage == null) return true;
+    if (stage == null) return false;
+    if (isSelf != null && !!trig.ally !== !isSelf) return false;
+    var n = typeof stage === 'string' ? Number(String(stage).replace(/^B/, '')) : Number(stage);
+    return Number(trig.stage) === n;
+  }
+
+  function runEventSkills(u, team, enemies, frame, ctx, kind, stage) {
     for (var s = 0; s < u.skillState.length; s++) {
       var sk = u.skillState[s];
       if (sk.slot === 'burst') continue;
@@ -618,6 +627,7 @@ window.Engine = (function () {
         var bs = sk.blocks[b];
         var trig = bs.block.trigger || {};
         if (trig.kind !== kind) continue;
+        if (!stageMatches(trig, stage, false)) continue;
         if (trig.chance != null && ctx.rng() * 100 > trig.chance) continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
@@ -643,7 +653,7 @@ window.Engine = (function () {
   }
 
   /* Fire every block (in any of the three skills) whose trigger is `kind`. */
-  function runTriggered(u, team, enemies, frame, ctx, kind) {
+  function runTriggered(u, team, enemies, frame, ctx, kind, stage, isSelf) {
     for (var s = 0; s < u.skillState.length; s++) {
       var sk = u.skillState[s];
       var skill = u.skills[sk.slot];
@@ -651,6 +661,7 @@ window.Engine = (function () {
         var bs = sk.blocks[b];
         var trig = bs.block.trigger || {};
         if (trig.kind !== kind) continue;
+        if (!stageMatches(trig, stage, isSelf === undefined ? true : isSelf)) continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
       }
@@ -670,7 +681,8 @@ window.Engine = (function () {
       u.chargeFixed = Math.round(3.2 * FPS);   // セブンスドワーフ・フルアクティブ
       buff(u, 'swha-full', 'chargeDmgPct', 528, 'up', frame + 60 * FPS, {});
     }
-    runTriggered(u, team, enemies, frame, ctx, 'burst');
+    runTriggered(u, team, enemies, frame, ctx, 'burst', u.burstStageUsed);
+    runTriggered(u, team, enemies, frame, ctx, 'burstStage', u.burstStageUsed);
     var ct = u.skillState[2] ? u.skillState[2].ct : 20;
     u.burstReadyAt = frame + (ct > 0 ? ct : 20) * FPS;
     if (u.team) u.team.lastBurst = { unit: u, frame: frame, stage: u.burstStageUsed };
@@ -856,7 +868,9 @@ window.Engine = (function () {
             });
           }
           team.forEach(function (m) {
-            runEventSkills(m, team, enemies, frame, ctx, 'burstStage');
+            // バーストした本人は fireBurst 側で処理済み
+            if (m === bu) return;
+            runEventSkills(m, team, enemies, frame, ctx, 'burstStage', step.stage);
           });
         }
         if (st.chainIndex >= st.chain.length) {
