@@ -1,0 +1,17 @@
+name = "nikesmi-sync"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# 同期結果を5分だけ覚えておくための入れ物（任意）。
+# 無くても動きます。使う場合は次のコマンドで作ってから、出てきた id を下に貼る。
+#   npx wrangler kv namespace create SESSIONS
+# [[kv_namespaces]]
+# binding = "SESSIONS"
+# id = ""
+
+[vars]
+# この Worker を呼べるページ。自分の公開先だけに絞るのがおすすめ。
+ALLOWED_ORIGINS = "https://icekun0704.github.io,http://localhost:5173,http://127.0.0.1:5173"
+
+[observability]
+enabled = true

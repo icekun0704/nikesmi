@@ -35,10 +35,33 @@ window.COVER_HP_RATIO = window.COVER_HP_RATIO == null ? 0.35 : window.COVER_HP_R
 
 /* BlablaLink 同期の中継サーバー.
  *
- * 例: window.SYNC_PROXY = 'https://nikke-sync.example.workers.dev';
- * 同梱の tools/cloudflare-worker.js を Cloudflare Workers に置くと、そのURLになる。
+ * 一度 ?proxy=https://... を付けて開けば、以後このブラウザでは覚えておきます。
+ * 中継サーバーの作り方は worker/README.md を見てください。
  */
-window.SYNC_PROXY = window.SYNC_PROXY || '';
+(function () {
+  var KEY = 'nikesmi.syncProxy';
+  var fromQuery = null;
+  try {
+    fromQuery = new URLSearchParams(location.search).get('proxy');
+    if (fromQuery) localStorage.setItem(KEY, fromQuery);
+  } catch (e) { /* ignore */ }
+
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) { /* ignore */ }
+
+  window.SYNC_PROXY =
+    window.SYNC_PROXY || fromQuery || saved || 'https://nikesmi-sync.icekun-33d.workers.dev';
+
+  window.setSyncProxy = function (url) {
+    var clean = String(url || '').trim().replace(/\/+$/, '');
+    window.SYNC_PROXY = clean;
+    try {
+      if (clean) localStorage.setItem(KEY, clean);
+      else localStorage.removeItem(KEY);
+    } catch (e) { /* ignore */ }
+    return clean;
+  };
+})();
 
 /* 戦闘のテンポ.
  *

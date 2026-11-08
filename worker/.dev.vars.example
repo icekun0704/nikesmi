@@ -1,0 +1,7 @@
+# ローカル確認用。`npx wrangler dev` のときだけ読まれます。
+# 本番は `npx wrangler secret put BLABLINK_COOKIE` で入れてください。
+#
+# 中身は、PC のブラウザで blablalink.com を開き、
+# F12 → Application → Cookies → https://www.blablalink.com
+# の「名前=値」を ; でつないだ1行です。
+BLABLINK_COOKIE=

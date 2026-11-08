@@ -411,3 +411,36 @@ button,select,input{font-family:inherit;font-size:inherit;color:inherit}
   .topbar{flex-wrap:wrap;height:auto;padding:10px 16px;gap:10px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ------------------------------------------------------------ sync sheet */
+.synclead{margin:0 0 16px;color:var(--fg-2);line-height:1.7}
+.syncrow{display:flex;gap:8px;align-items:center}
+.syncrow input{
+  flex:1;min-width:0;background:var(--bg-2);border:1px solid var(--line);
+  border-radius:10px;padding:10px 13px;color:var(--fg);font-size:13px;
+}
+.syncrow input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px rgba(139,92,246,.18)}
+.syncrow .btn{white-space:nowrap}
+.syncstatus{min-height:20px;margin:10px 0 0;font-size:12px;color:var(--fg-3)}
+.syncstatus.ok{color:#4ade80}
+.syncstatus.warn{color:#fbbf24}
+.syncadv{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.syncadv summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--fg-2);list-style:none}
+.syncadv summary::-webkit-details-marker{display:none}
+.syncadv summary::before{content:'▸';display:inline-block;width:14px;transition:transform .15s}
+.syncadv[open] summary::before{transform:rotate(90deg)}
+.syncadv p{font-size:12px;color:var(--fg-3);line-height:1.7;margin:10px 0}
+.syncadv code{background:var(--bg-2);padding:1px 5px;border-radius:5px;font-size:11px}
+.synchint{font-size:11px!important;opacity:.75}
+
+.syncbtn{
+  flex:none;border:1px solid transparent;border-radius:10px;padding:0 20px;height:40px;
+  background:linear-gradient(135deg,var(--violet),#5b8bff);color:#fff;
+  font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;
+  box-shadow:0 8px 22px -12px rgba(124,92,255,.95);transition:filter .15s,transform .1s;
+}
+.syncbtn:hover{filter:brightness(1.1)}
+.syncbtn:active{transform:translateY(1px)}
+.syncbtn:disabled{opacity:.5;cursor:default}
+.syncbtn.ghost{background:var(--bg-2);border-color:var(--line);color:var(--fg-2);box-shadow:none;font-weight:600}
+.syncbtn.ghost:hover{color:#fff;border-color:rgba(255,255,255,.28)}

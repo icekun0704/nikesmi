@@ -306,116 +306,70 @@ window.Sync = (function () {
   };
 })();
 
+
 /* ------------------------------------------------------------------ UI */
 
-/* URL を貼るだけで同期するための取得経路.
+/* URL を貼るだけで同期するための取り込み口.
  *
- * blablalink のゲームAPIは blablalink.com 以外のオリジンに CORS ヘッダを返さない。
- * そのため、静的サイトからは中継なしでは呼べない。中継先は js/config.js の
- * SYNC_PROXY に置く（同梱の tools/cloudflare-worker.js をそのまま配備すればよい）。
+ * blablalink のキャラクター情報は、そのサイトにログインしていないと取得できません。
+ * ブラウザから直に問い合わせることもできません（CORS）。
+ * そのため、ログイン状態を持った中継サーバー（worker/）を経由します。
+ * 中継先は ?proxy=… で一度指定すれば、このブラウザに記憶されます。
  */
 window.SyncFetch = (function () {
   'use strict';
 
-  var COMMON = JSON.stringify({
-    game_id: '16', intl_game_id: '29080',
-    source: 'pc_web', env: 'prod', language: 'ja'
-  });
+  function proxyBase() {
+    return String(window.SYNC_PROXY || '').replace(/\/+$/, '');
+  }
 
   function openidFrom(text) {
     if (!text) return null;
-    var m = String(text).match(/openid=([^&\s]+)/);
+    var m = String(text).match(/[?&]openid=([^&\s]+)/);
     if (m) {
       try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
     }
-    if (/^[A-Za-z0-9+/=]{20,}$/.test(String(text).trim())) return String(text).trim();
+    if (/^[A-Za-z0-9+/=_-]{16,}$/.test(String(text).trim())) return String(text).trim();
     return null;
   }
 
-  function digitsOf(openid) {
-    var m = String(openid).match(/\d{19}/);
-    return m ? m[0] : null;
-  }
-
-  function call(path, body) {
-    var proxy = window.SYNC_PROXY;
-    if (!proxy) return Promise.reject(new Error('中継先が未設定です（js/config.js の SYNC_PROXY）'));
-    var base = String(proxy).replace(/\/$/, '');
-    return fetch(base + '?path=' + encodeURIComponent(path), {
+  function request(path, payload) {
+    var base = proxyBase();
+    if (!base) return Promise.reject(new Error('同期サーバーが未設定です'));
+    return fetch(base + path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body: body || {}, common: COMMON })
+      body: JSON.stringify(payload || {})
     }).then(function (r) {
-      if (!r.ok) throw new Error('中継先が ' + r.status + ' を返しました');
-      return r.json();
+      return r.json().catch(function () {
+        throw new Error('同期サーバーが応答しませんでした（' + r.status + '）');
+      }).then(function (data) {
+        if (!r.ok || data.error) throw new Error(data.error || ('同期サーバーが ' + r.status + ' を返しました'));
+        return data;
+      });
     });
   }
-
-  var AREAS = [81, 82, 83, 84, 85];
 
   function fetchByUrl(url) {
     var openid = openidFrom(url);
-    if (!openid) return Promise.reject(new Error('URL から openid を読み取れませんでした'));
-    var digits = digitsOf(openid) || openid;
-
-    function chars(area) {
-      return call('/api/game/proxy/Game/GetUserCharacters', {
-        intl_open_id: Number(digits), nikke_area_id: area
-      });
-    }
-
-    return call('/api/game/proxy/Game/GetSavedRoleInfo', {}).then(function (role) {
-      var a = role && role.data && role.data.role_info && role.data.role_info.area_id;
-      return a || AREAS[0];
-    }).catch(function () { return AREAS[0]; }).then(function (area) {
-      return chars(area).then(function (res) {
-        var list = res && res.data && (res.data.characters || res.data.list);
-        if (list && list.length) return { list: list, area: area };
-        return chars(AREAS[0]).then(function (res2) {
-          var l2 = res2 && res2.data && (res2.data.characters || res2.data.list);
-          if (!l2 || !l2.length) throw new Error('キャラクター情報が空でした');
-          return { list: l2, area: AREAS[0] };
-        });
-      });
-    }).then(function (got) {
-      var codes = got.list.map(function (c) { return c.name_code; }).filter(Boolean);
-      return call('/api/game/proxy/Game/GetUserCharacterDetails', {
-        intl_open_id: Number(digits), nikke_area_id: got.area, name_codes: codes
-      }).then(function (res) {
-        var dl = (res && res.data && (res.data.character_details || res.data.characters || res.data.list)) || [];
-        return {
-          type: 'nikesmi-sync/v2', version: 2, source: 'blablalink-url',
-          area_id: got.area,
-          characters: got.list.map(function (c) {
-            var d = dl.filter(function (x) { return x.name_code === c.name_code; })[0] || {};
-            var pick = function (k) { return Number(d[k] != null ? d[k] : c[k]) || 0; };
-            return {
-              name_code: Number(c.name_code),
-              level: pick('lv'), limit_break: pick('grade'), core: pick('core'),
-              affection: pick('attractive_lv'),
-              skills: { s1: pick('skill1_lv'), s2: pick('skill2_lv'), burst: pick('ulti_skill_lv') },
-              cube_lv: pick('harmony_cube_lv'),
-              equip: {
-                head: pick('head_equip_lv'), body: pick('torso_equip_lv'),
-                arm: pick('arm_equip_lv'), leg: pick('leg_equip_lv')
-              },
-              options: [
-                d.head_equip_option1_id, d.head_equip_option2_id, d.head_equip_option3_id,
-                d.torso_equip_option1_id, d.torso_equip_option2_id, d.torso_equip_option3_id,
-                d.arm_equip_option1_id, d.arm_equip_option2_id, d.arm_equip_option3_id,
-                d.leg_equip_option1_id, d.leg_equip_option2_id, d.leg_equip_option3_id
-              ].map(Number),
-              favorite_item_lv: pick('favorite_item_lv'),
-              treasure: !!Number(d.favorite_item_tid || c.favorite_item_tid),
-              combat: pick('combat')
-            };
-          })
-        };
-      });
+    if (!openid) return Promise.reject(new Error('URL を読み取れませんでした'));
+    return request('/sync', { url: String(url) }).then(function (data) {
+      if (!data || !data.characters || !data.characters.length) {
+        throw new Error('キャラクター情報が空でした');
+      }
+      return data;
     });
   }
 
-  return { openidFrom: openidFrom, fetchByUrl: fetchByUrl };
+  function health() {
+    var base = proxyBase();
+    if (!base) return Promise.resolve(null);
+    return fetch(base + '/', { method: 'GET' })
+      .then(function (r) { return r.json(); })
+      .catch(function () { return null; });
+  }
+
+  return { openidFrom: openidFrom, fetchByUrl: fetchByUrl, health: health, proxyBase: proxyBase };
 })();
 
 window.SyncUI = (function () {
@@ -432,36 +386,79 @@ window.SyncUI = (function () {
     importPayload(d);
   }
 
-  function status(text) {
+  function status(text, kind) {
     var s = document.querySelector('#syncStatus');
-    if (s) s.textContent = text;
+    if (!s) return;
+    s.textContent = text || '';
+    s.className = 'syncstatus' + (kind ? ' ' + kind : '');
   }
 
   function open() {
     var body = document.querySelector('#syncBody');
+    var configured = !!window.SyncFetch.proxyBase();
+
     body.innerHTML = [
-      '<p>BlablaLink と連携すると、所持ニケと育成状況を取り込めます。取り込んだ内容はブラウザの中だけに保存され、どこにも送られません。</p>',
-      '<h3>手順</h3>',
-      '<ol>',
-      '<li>「BlablaLink を開く」を押して、ログインします</li>',
-      '<li>下の「NIKESMI 同期」を、ブックマークバーへドラッグします（初回だけ。Ctrl+Shift+B でバーが出ます）' +
-      '<br><a class="bmk" id="bmk" href="#" onclick="return false">NIKESMI 同期</a></li>',
-      '<li>開いた BlablaLink の画面で、いま登録したブックマークを押します</li>',
-      '</ol>',
-      '<p id="syncStatus">待機中…</p>',
-      '<h3>ブックマークが使えないとき</h3>',
-      '<p>同期用のファイルをここにドロップしてください。</p>',
+      '<p class="synclead">BlablaLink の URL を貼ると、所持ニケと育成状況を取り込んで、' +
+      'ステータスに反映します。取り込んだ内容はこのブラウザの中だけに保存され、どこにも送られません。</p>',
+
+      '<div class="syncrow">',
+      '<input id="syncUrl" type="url" spellcheck="false" autocomplete="off" ' +
+      'placeholder="https://www.blablalink.com/user?openid=…">',
+      '<button class="syncbtn" id="syncGo">同期</button>',
+      '</div>',
+      '<p id="syncStatus" class="syncstatus"></p>',
+
+      '<details class="syncadv" id="syncAdv">',
+      '<summary>同期サーバー</summary>',
+      '<p>キャラクター情報は BlablaLink にログインしていないと取得できないため、' +
+      '中継サーバーを1つ用意します。URL を一度入れておけば、次回からは不要です。</p>',
+      '<div class="syncrow">',
+      '<input id="syncProxy" type="url" spellcheck="false" autocomplete="off" ' +
+      'placeholder="https://nikesmi-sync.xxxx.workers.dev">',
+      '<button class="syncbtn ghost" id="syncProxySave">保存</button>',
+      '</div>',
+      '<p class="synchint">作り方は <code>worker/README.md</code> にあります。</p>',
+      '</details>',
+
+      '<details class="syncadv">',
+      '<summary>うまくいかないとき</summary>',
+      '<p>BlablaLink を開いてログインした状態で、下のブックマークを押すと取り込めます。' +
+      '（初回だけブックマークバーへドラッグ。Ctrl+Shift+B でバーが出ます）</p>',
+      '<p><a class="bmk" id="bmk" href="#" onclick="return false">NIKESMI 同期</a></p>',
+      '<p>同期用のファイルをお持ちなら、ここにドロップしても取り込めます。</p>',
       '<div id="dropzone">ここにドロップ、またはクリックして選択' +
-      '<input type="file" id="syncFile" accept="application/json,.json" hidden></div>'
+      '<input type="file" id="syncFile" accept="application/json,.json" hidden></div>',
+      '</details>'
     ].join('');
+
+    var urlInput = document.querySelector('#syncUrl');
+    var proxyInput = document.querySelector('#syncProxy');
+    var adv = document.querySelector('#syncAdv');
+
+    proxyInput.value = window.SyncFetch.proxyBase();
+    if (!configured) adv.open = true;
+
+    document.querySelector('#syncGo').onclick = function () { run(urlInput.value); };
+    urlInput.onkeydown = function (e) {
+      if (e.key === 'Enter') run(urlInput.value);
+    };
+
+    document.querySelector('#syncProxySave').onclick = function () {
+      var saved = window.setSyncProxy(proxyInput.value);
+      proxyInput.value = saved;
+      status(saved ? '保存しました' : '解除しました', saved ? '' : 'warn');
+    };
+
     document.querySelector('#bmk').href = window.Sync.bookmarkletHref;
-    document.querySelector('#openBL') && (document.querySelector('#openBL').onclick = null);
 
     var zone = document.querySelector('#dropzone');
     var file = document.querySelector('#syncFile');
     zone.onclick = function () { file.click(); };
     zone.ondragover = function (e) { e.preventDefault(); };
-    zone.ondrop = function (e) { e.preventDefault(); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); };
+    zone.ondrop = function (e) {
+      e.preventDefault();
+      if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+    };
     file.onchange = function () { if (file.files[0]) readFile(file.files[0]); };
 
     function readFile(f) {
@@ -471,17 +468,51 @@ window.SyncUI = (function () {
     }
 
     document.querySelector('#syncSheet').hidden = false;
+    setTimeout(function () { urlInput.focus(); }, 60);
+
+    if (configured) {
+      window.SyncFetch.health().then(function (h) {
+        if (!h) return;
+        if (h.has_cookie === false) {
+          status('同期サーバーにログイン情報がありません', 'warn');
+        }
+      });
+    }
+  }
+
+  function run(text) {
+    var value = String(text || '').trim();
+    if (!value) { status('URL を入れてください', 'warn'); return; }
+    if (!window.SyncFetch.proxyBase()) {
+      status('先に同期サーバーを設定してください', 'warn');
+      document.querySelector('#syncAdv').open = true;
+      return;
+    }
+    status('読み込み中…');
+    var go = document.querySelector('#syncGo');
+    go.disabled = true;
+
+    window.SyncFetch.fetchByUrl(value).then(function (data) {
+      importPayload(data);
+    }).catch(function (e) {
+      status((e && e.message) || '同期できませんでした', 'warn');
+    }).then(function () {
+      go.disabled = false;
+    });
   }
 
   function importPayload(d) {
-    if (!d) { status('内容を読み取れませんでした'); return; }
+    if (!d) { status('内容を読み取れませんでした', 'warn'); return; }
     var norm = window.Sync.normalise(d);
-    if (!norm) { status('内容を読み取れませんでした'); return; }
+    if (!norm) { status('内容を読み取れませんでした', 'warn'); return; }
     var result = window.Sync.applyTo(norm);
     window.Sync.save(result);
     if (window.Nikesmi) window.Nikesmi.setSync(result);
-    status('取り込みました — ' + Object.keys(result.owned).length + '体');
-    setTimeout(function () { document.querySelector('#syncSheet').hidden = true; }, 800);
+    status('取り込みました — ' + Object.keys(result.owned).length + '体', 'ok');
+    setTimeout(function () {
+      var sheet = document.querySelector('#syncSheet');
+      if (sheet) sheet.hidden = true;
+    }, 900);
   }
 
   function safeParse(text) {
