@@ -828,6 +828,10 @@ def parse_skill(infos, slot, ct, treasure):
               'excludeSelf': False, 'weapon': None, 'element': None, 'classType': None}),
             '')
         trigger = parse_trigger(trig_text if hdr else '', slot, ct)
+        # 条件が「、」より前に無い書き方（例: 対象が気絶状態→…なら同一の敵に）を
+        # 条件なし扱いにしてしまうと、開幕に大ダメージが飛ぶ。必ず条件付きにする。
+        if hdr and not trig_text and re.search(r'(なら|時|場合|のみ|状態)', hdr):
+            trigger = {'kind': 'unknown', 'text': hdr}
         conds = parse_condition(hdr)
         if conds:
             trigger.setdefault('conditions', []).extend(conds)

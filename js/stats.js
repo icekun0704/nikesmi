@@ -142,7 +142,7 @@ window.Stats = (function () {
       lb: r.lb,
       core: r.core,
       affection: r.affection,
-      research: { general: 180, classType: 100, company: 100 },
+      research: { general: 200, classType: 100, company: 100 },
       cubeLevel: 10,
       equipLevel: 5,
       collectible: { rarity: 'SR', level: 10 },

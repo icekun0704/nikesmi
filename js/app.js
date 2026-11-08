@@ -35,11 +35,12 @@
     mode: 'champion',
     teams: { A: [null, null, null, null, null], B: [null, null, null, null, null] },
     editSide: 'A',
+    teamLevel: { A: 400, B: 400 },
     selected: { side: 'A', index: 0 },
     search: '',
     filters: { burst: {}, element: {}, classType: {} },
     ownedOnly: false,
-    liveCorrection: true,
+    liveCorrection: false,
     sort: 'power',
     zoom: 1,
     pan: 0,
@@ -57,13 +58,14 @@
     if (saved) {
       if (saved.teams) store.teams = saved.teams;
       if (saved.mode) store.mode = saved.mode;
+      if (saved.teamLevel) store.teamLevel = saved.teamLevel;
     }
   } catch (e) { /* ignore */ }
 
   function persist() {
     try {
       localStorage.setItem('nikesmi.ui.v2', JSON.stringify({
-        teams: store.teams, mode: store.mode
+        teams: store.teams, mode: store.mode, teamLevel: store.teamLevel
       }));
     } catch (e) { /* quota */ }
   }
@@ -79,27 +81,31 @@
 
   function cfgOf(entry) { return (entry && entry.cfg) || null; }
 
-  function statsOf(entry) {
+  function levelFor(side) {
+    return MODE[store.mode].levelLocked ? 400 : (store.teamLevel[side || 'A'] || 400);
+  }
+
+  function statsOf(entry, side) {
     var c = BY_ID[entry.charId];
     if (!c) return null;
     var cfg = cfgOf(entry) || {};
     var s = Object.assign({}, cfg.stats || {});
-    if (MODE[store.mode].levelLocked) s.level = 400;
+    s.level = levelFor(side);
     return window.Stats.compute(c, s);
   }
 
-  function cpOf(entry) {
+  function cpOf(entry, side) {
     var c = BY_ID[entry.charId];
     var cfg = cfgOf(entry) || {};
     var s = Object.assign({}, cfg.stats || {});
-    if (MODE[store.mode].levelLocked) s.level = 400;
+    s.level = levelFor(side);
     var st = window.Stats.compute(c, s);
     return window.Stats.combatPower(st, s, cfg.skillLevels || {});
   }
 
-  function totalCp(team) {
+  function totalCp(team, side) {
     var t = 0;
-    team.forEach(function (e) { if (e) t += cpOf(e); });
+    team.forEach(function (e) { if (e) t += cpOf(e, side); });
     return t;
   }
 
@@ -210,7 +216,7 @@
       advSpan.style.color = ELEMENT_COLOR[beats] || '#888';
       advSpan.title = c.element + ' は ' + (beats || '—') + ' に有利';
       line.appendChild(advSpan);
-      line.appendChild(el('span', 'tacp', Math.round(cpOf({ charId: c.id }) / 100) / 10 + 'k'));
+      line.appendChild(el('span', 'tacp', Math.round(cpOf({ charId: c.id }, store.editSide) / 100) / 10 + 'k'));
       plate.appendChild(line);
 
       card.appendChild(thumb);
@@ -250,8 +256,26 @@
     var host = $('#slots' + side);
     host.innerHTML = '';
     for (var i = 0; i < 5; i++) host.appendChild(makeSlot(side, i));
-    var cp = totalCp(store.teams[side]);
-    $('#meta' + side).textContent = cp ? Math.round(cp / 1000) + 'k' : '';
+    var cp = totalCp(store.teams[side], side);
+    var meta = $('#meta' + side);
+    meta.textContent = '';
+    if (!MODE[store.mode].levelLocked) {
+      var lvWrap = document.createElement('label');
+      lvWrap.className = 'lvwrap';
+      lvWrap.appendChild(el('span', null, 'Lv'));
+      var inp = document.createElement('input');
+      inp.type = 'number'; inp.min = 1; inp.max = 400;
+      inp.value = store.teamLevel[side] || 400;
+      inp.addEventListener('change', function () {
+        var v = Math.max(1, Math.min(400, parseInt(inp.value, 10) || 400));
+        inp.value = v;
+        store.teamLevel[side] = v;
+        persist(); renderAll(); scheduleSim();
+      });
+      lvWrap.appendChild(inp);
+      meta.appendChild(lvWrap);
+    }
+    if (cp) meta.appendChild(el('span', 'cpv', Math.round(cp / 1000) + 'k'));
   }
 
   function makeSlot(side, index) {
@@ -556,6 +580,9 @@
       lvField.querySelector('input').value = 400;
       lvField.title = 'チャンピオンアリーナは全員Lv400固定です';
     }
+    lvField.querySelector('input').disabled = true;
+    lvField.querySelector('input').value = MODE[store.mode].levelLocked ? 400 : (store.teamLevel[editing.side] || 400);
+    lvField.title = 'レベルはチーム共通です（編成バーの Lv）';
     g1.appendChild(lvField);
     g1.appendChild(selectField('限界突破', s.lb == null ? 3 : s.lb,
       [0, 1, 2, 3].map(function (v) { return { value: v, label: v + '凸' }; }),
@@ -628,7 +655,7 @@
 
     var g5 = el('div', 'fieldset');
     g5.appendChild(el('h4', null, '最終ステータス'));
-    var st = statsOf(entry);
+    var st = statsOf(entry, editing ? editing.side : side);
     [['攻撃力', st.atk], ['HP', st.hp], ['防御力', st.def], ['戦闘力', cpOf(entry)]].forEach(function (row) {
       var r = el('div', 'statrow');
       r.appendChild(el('span', 'k', row[0]));
@@ -663,8 +690,11 @@
         if (!e) return;
         var cfg = cfgOf(e) || {};
         var skills = cfg.skillLevels || {};
+        var st = Object.assign({}, cfg.stats || {});
+        var lv = MODE[store.mode].levelLocked ? 400 : (store.teamLevel[side] || 400);
+        st.level = lv;
         units[side + '|' + i] = {
-          stats: cfg.stats || null,
+          stats: st,
           chargeSpeed: (cfg.stats && cfg.stats.overload && cfg.stats.overload.chargeSpeed) || 0,
           skillScale: {
             skill1: window.Stats.skillScale(skills.skill1 || 10),

@@ -50,6 +50,7 @@ window.Engine = (function () {
 
   function stagesOf(char) {
     var s = String(char.burstStage || '');
+    if (/B123/.test(s)) return ['B1', 'B2', 'B3'];
     var out = s.match(/B[123]/g);
     return out && out.length ? out : ['B1', 'B2', 'B3'];
   }
@@ -261,11 +262,15 @@ window.Engine = (function () {
     var remaining = amount;
 
     // 遮蔽物: 範囲バーストは貫通し、単体攻撃はまず遮蔽物が受ける
+    var absorbedByCover = 0;
     if (!ctx.piercesCover && target.coverHp > 0) {
       var eaten = Math.min(target.coverHp, remaining);
       target.coverHp -= eaten;
       remaining -= eaten;
-      if (remaining <= 0) return 0;
+      absorbedByCover = eaten;
+      target.coverDamage = (target.coverDamage || 0) + eaten;
+      if (source) source.damageDealt += eaten;
+      if (remaining <= 0) return eaten;
     }
 
     if (target.shield > 0) {
@@ -281,6 +286,7 @@ window.Engine = (function () {
 
     target.hp -= remaining;
     target.damageTaken += remaining;
+    if (absorbedByCover) target.damageTaken += 0;
     if (source) { source.damageDealt += remaining; target.lastHitBy = source; }
 
     if (source && source.lifestealPct > 0) {
@@ -535,6 +541,8 @@ window.Engine = (function () {
         if (trig.kind !== 'always' && trig.kind !== 'battleStart') continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
         if (trig.kind === 'battleStart' && frame > 0) continue;
+        // 常時パッシブはダメージを与えない（与えるものは別のトリガーを持つ）
+        if (!bs.block.effects.some(function (ef) { return ef.op !== 'damage'; })) continue;
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
       }
     }

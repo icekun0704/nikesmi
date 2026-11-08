@@ -44,6 +44,6 @@ window.SYNC_PROXY = window.SYNC_PROXY || '';
  *
  * ダメージ式そのものは資料どおりだが、そのままだと最初のフルバーストで
  * 決着がついてしまい、実戦（20〜30秒・バースト3〜4回）より短くなる。
- * 実戦のテンポに合わせるための係数。1.0 で資料どおりの式。
+ * 実戦は5秒前後で決着するので、既定は 1.0（資料どおりの式）。
  */
-window.DAMAGE_SCALE = window.DAMAGE_SCALE == null ? 0.35 : window.DAMAGE_SCALE;
+window.DAMAGE_SCALE = window.DAMAGE_SCALE == null ? 1.0 : window.DAMAGE_SCALE;

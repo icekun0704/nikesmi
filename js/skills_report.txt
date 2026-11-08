@@ -1,6 +1,6 @@
 characters 206  forms 412
 blocks 2299  effects 3175  unparsed 437 (13.8%)
-triggers: {"counter": 228, "fullBurst": 172, "burst": 846, "unknown": 283, "periodic": 111, "fullChargeShot": 136, "always": 166, "hitTaken": 12, "attack": 29, "lastBullet": 54, "battleStart": 146, "enemyDeath": 8, "allyBurst": 2, "selfHpBelow": 8, "burstStage": 36, "fullBurstEnd": 42, "never": 18, "reload": 2}
+triggers: {"counter": 228, "fullBurst": 172, "burst": 797, "unknown": 409, "periodic": 111, "fullChargeShot": 136, "always": 89, "hitTaken": 12, "attack": 29, "lastBullet": 54, "battleStart": 146, "enemyDeath": 8, "allyBurst": 2, "selfHpBelow": 8, "burstStage": 36, "fullBurstEnd": 42, "never": 18, "reload": 2}
 
 --- unparsed samples ---
 敵の発射体を攻撃する時、該当の発射体に与えるダメージ7.74%▲
