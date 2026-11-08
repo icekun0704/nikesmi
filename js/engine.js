@@ -192,6 +192,28 @@ window.Engine = (function () {
       quantumCube: cfg.quantumCube,
       superstarSupplement: o.superstarSupplement || 0
     });
+    // 調和の魔方の固有効果（レベルで3段階）
+    if (window.CubeUtil && cfg.cube) {
+      var cu = window.CubeUtil;
+      var cstat = cu.byId(cfg.cube.id);
+      var cval = cu.valueAt(cfg.cube.id, cfg.cube.level);
+      if (cstat && cstat.stat && cval) {
+        u.buffs.push({
+          key: 'cube', stat: cstat.stat, value: Math.abs(cval),
+          dir: cval < 0 ? 'down' : 'up', until: Infinity, stacks: 1,
+          maxStacks: 1, aura: false, refreshed: 0, label: 'cube'
+        });
+      }
+      var elv = cu.elementAt(cfg.cube.level);
+      if (elv) {
+        u.buffs.push({
+          key: 'cube-element', stat: 'elementDmgPct', value: elv,
+          dir: 'up', until: Infinity, stacks: 1, maxStacks: 1,
+          aura: false, refreshed: 0, label: 'cube-element'
+        });
+      }
+    }
+
     u.skills = (window.SKILL_DB && window.SKILL_DB[u.skillKey]) || null;
     if (u.skills) {
       ['skill1', 'skill2', 'burst'].forEach(function (slot) {

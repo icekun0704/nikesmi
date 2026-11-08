@@ -599,7 +599,15 @@
     g2.appendChild(selectField('装備強化', s.equipLevel == null ? 5 : s.equipLevel,
       [0, 1, 2, 3, 4, 5].map(function (v) { return { value: v, label: 'T10 +' + v }; }),
       function (v) { s.equipLevel = +v; }));
-    g2.appendChild(numField('魔方 Lv', s.cubeLevel == null ? 10 : s.cubeLevel, 0, 15, 1, function (v) { s.cubeLevel = v; }));
+    var cubeOpts = (window.CUBES || []).map(function (cb) {
+      return { value: cb.id, label: cb.id === 'none' ? 'なし' : cb.name };
+    });
+    var cubeSel = s.cube || (s.cube = { id: 'none', level: 10 });
+    if (typeof cubeSel === 'string') { s.cube = { id: cubeSel, level: s.cubeLevel || 10 }; cubeSel = s.cube; }
+    g2.appendChild(selectField('魔方', cubeSel.id, cubeOpts, function (v) { cubeSel.id = v; }));
+    g2.appendChild(numField('魔方 Lv', cubeSel.level == null ? 10 : cubeSel.level, 0, 15, 1, function (v) {
+      cubeSel.level = v; s.cubeLevel = v;
+    }));
     var coll = s.collectible || { rarity: 'SR', level: 10 };
     s.collectible = coll;
     g2.appendChild(selectField('コレクション', coll.rarity,
@@ -695,6 +703,7 @@
         st.level = lv;
         units[side + '|' + i] = {
           stats: st,
+          cube: (cfg.stats && cfg.stats.cube) || null,
           chargeSpeed: (cfg.stats && cfg.stats.overload && cfg.stats.overload.chargeSpeed) || 0,
           skillScale: {
             skill1: window.Stats.skillScale(skills.skill1 || 10),
