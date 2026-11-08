@@ -39,6 +39,7 @@
     search: '',
     filters: { burst: {}, element: {}, classType: {} },
     ownedOnly: false,
+    liveCorrection: false,
     sort: 'power',
     zoom: 1,
     pan: 0,
@@ -722,6 +723,30 @@
       first ? ' 秒 ' + (first.side === 'A' ? '自' : '相') : '');
     var killer = r.sample ? r.sample.events.filter(function (e) { return e.kind === 'death'; })[0] : null;
     fact('初回撃破', killer ? (killer.frame / 60).toFixed(1) : '—', killer ? ' 秒 ' + killer.unit : '');
+
+    if (store.liveCorrection) {
+      var lp = liveProbability();
+      if (lp != null) fact('実戦データ', Math.round(lp * 100) + '%', ' 過去の大会記録');
+    }
+  }
+
+  /* 過去の大会記録から推定した「その編成が勝ちやすいか」.
+   * シミュレーションとは別物で、理由の説明はできない。 */
+  function liveProbability() {
+    var R = window.RATINGS;
+    if (!R || !R.ratings) return null;
+    function score(team) {
+      var s = 0;
+      team.forEach(function (e) {
+        if (!e) return;
+        var rec = R.ratings[String(e.charId)];
+        if (rec) s += rec.r;
+      });
+      return s;
+    }
+    var a = score(store.teams.A), b = score(store.teams.B);
+    if (!a && !b) return null;
+    return 1 / (1 + Math.exp(-(a - b) / (R.scale || 4)));
   }
 
   /* --------------------------------------------------------------- events */
@@ -1208,6 +1233,13 @@
     });
 
     $('#sortBy').addEventListener('change', function (e) { store.sort = e.target.value; renderRoster(); });
+
+    var lc = $('#liveCorrection');
+    if (lc) lc.addEventListener('click', function () {
+      store.liveCorrection = !store.liveCorrection;
+      lc.classList.toggle('on', store.liveCorrection);
+      renderVerdict();
+    });
 
     document.querySelectorAll('#editSeg .seg').forEach(function (b) {
       b.addEventListener('click', function () {
