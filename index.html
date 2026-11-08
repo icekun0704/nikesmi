@@ -17,11 +17,14 @@
     <span class="brand-sub">ニケシミュ</span>
   </div>
 
+  <div class="modebox">
   <nav class="modes" id="modes">
     <button class="mode on" data-mode="champion">チャンピオン</button>
     <button class="mode" data-mode="rookie">ルーキー</button>
     <button class="mode" data-mode="special">スペシャル</button>
   </nav>
+  <span class="modehint" id="modeHint"></span>
+  </div>
 
   <div class="topspacer"></div>
 
@@ -147,6 +150,16 @@
       <button class="close" data-close="unitSheet">✕</button>
     </div>
     <div class="unitbody" id="unitBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="skillSheet" hidden>
+  <div class="modalpanel">
+    <div class="modalhead">
+      <span class="h" id="skillTitle">スキル</span>
+      <button class="close" data-close="skillSheet">✕</button>
+    </div>
+    <div class="docbody" id="skillBody"></div>
   </div>
 </div>
 

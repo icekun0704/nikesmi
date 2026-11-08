@@ -1,0 +1,10 @@
+master rows: 206
+treasure forms: 17
+characters emitted: 223
+joined to timing data: 223
+with name_code: 219
+with portrait: 223
+with burst damage: 106
+core rows dropped: 6  [203, 204, 205, 211, 225, 233]
+master rows with no timing data: 0
+wrote D:\icekun\nikke\arena-sim\js\data.js (441.6 KB)

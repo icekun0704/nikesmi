@@ -127,12 +127,21 @@ window.Stats = (function () {
     return { hp: g * 450 + c * 750, atk: co * 25, def: c * 5 + co * 5 };
   }
 
+  /* レア度ごとの現実的な上限。R は限界突破もコアも伸ばせないので、
+   * 何も設定していない状態では SSR より低い戦闘力になる。 */
+  var RARITY_DEFAULTS = {
+    R:   { lb: 0, core: 0, affection: 10 },
+    SR:  { lb: 2, core: 0, affection: 30 },
+    SSR: { lb: 3, core: 3, affection: 40 }
+  };
+
   function defaults(char) {
+    var r = RARITY_DEFAULTS[char && char.rarity] || RARITY_DEFAULTS.SSR;
     return {
       level: 400,
-      lb: 3,
-      core: 3,
-      affection: 40,
+      lb: r.lb,
+      core: r.core,
+      affection: r.affection,
       research: { general: 180, classType: 100, company: 100 },
       cubeLevel: 10,
       equipLevel: 5,

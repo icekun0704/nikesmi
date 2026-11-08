@@ -17,6 +17,8 @@
     return p;
   }
 
+  var ELEMENT_BEATS = { '灼熱': '風圧', '風圧': '鉄甲', '鉄甲': '電撃', '電撃': '水冷', '水冷': '灼熱' };
+
   var ELEMENT_COLOR = {
     '灼熱': '#ff6b4a', '水冷': '#4aa8ff', '風圧': '#57d98b',
     '電撃': '#b47bff', '鉄甲': '#c9a24a'
@@ -192,6 +194,14 @@
       }
 
       thumb.appendChild(el('span', 'badgeB', burstStages(c)[0] || ''));
+      var clsTag = { '火力型': '火力', '防御型': '防御', '支援型': '支援' }[c.classType] || c.classType;
+      thumb.appendChild(el('span', 'cls', clsTag));
+      var beats = ELEMENT_BEATS[c.element];
+      var prey = window.CHARACTERS.filter(function (x) { return x.element === beats; })[0];
+      var adv = el('span', 'adv', (beats || '').slice(0, 2));
+      adv.title = c.element + ' は ' + (beats || '—') + ' に有利';
+      adv.style.color = ELEMENT_COLOR[beats] || '#888';
+      thumb.appendChild(adv);
       var dot = el('span', 'badgeE');
       dot.style.background = ELEMENT_COLOR[c.element] || '#888';
       thumb.appendChild(dot);
@@ -207,7 +217,21 @@
       if (where) card.appendChild(el('div', 'used'));
       if (store.sync && !isOwned(c)) card.classList.add('dim');
 
-      card.addEventListener('click', function () { placeChar(c.id); });
+      var pressTimer = null, longPressed = false;
+      card.addEventListener('pointerdown', function () {
+        longPressed = false;
+        pressTimer = setTimeout(function () {
+          longPressed = true;
+          openSkillSheet(c);
+        }, 1000);
+      });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (evt) {
+        card.addEventListener(evt, function () { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+      });
+      card.addEventListener('click', function (ev) {
+        if (longPressed) { longPressed = false; ev.preventDefault(); return; }
+        placeChar(c.id);
+      });
       card.addEventListener('dragstart', function (ev) {
         ev.dataTransfer.setData('text/plain', String(c.id));
         ev.dataTransfer.effectAllowed = 'copy';
@@ -275,6 +299,16 @@
         openUnitSheet(side, index);
       });
       slot.appendChild(gear);
+      var clr = el('button', 'gear clear', '×');
+      clr.title = 'この枠から外す';
+      clr.style.right = '21px';
+      clr.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        store.teams[side][index] = null;
+        store.selected = { side: side, index: index };
+        persist(); renderAll(); scheduleSim();
+      });
+      slot.appendChild(clr);
       slot.appendChild(el('span', 'pnum', 'P' + (index + 1)));
 
       if (store.sample) {
@@ -321,10 +355,9 @@
   }
 
   function placeCharAt(side, index, charId) {
-    ['A', 'B'].forEach(function (s) {
-      store.teams[s].forEach(function (e, i) {
-        if (e && e.charId === charId) store.teams[s][i] = null;
-      });
+    // 同じニケを両チームに置ける。同じチーム内の重複だけ外す。
+    store.teams[side].forEach(function (e, i) {
+      if (e && e.charId === charId) store.teams[side][i] = null;
     });
     var cfg = null;
     if (store.sync && store.sync.chars) cfg = store.sync.chars[String(charId)] || null;
@@ -373,6 +406,28 @@
         renderPartySelects();
       };
     });
+  }
+
+  /* ----------------------------------------------------------- skill sheet */
+  function openSkillSheet(c) {
+    var st = c.skillText || {};
+    var parts = [];
+    parts.push('<h3>' + c.name + '</h3>');
+    parts.push('<p style="color:var(--fg-3);margin-top:-4px">' +
+      [c.weapon, c.element, c.classType, 'バースト ' + burstStages(c).join('/')].join(' ・ ') + '</p>');
+    [['burst', 'バーストスキル'], ['skill1', 'スキル1'], ['skill2', 'スキル2']].forEach(function (pair) {
+      var lines = st[pair[0]] || [];
+      if (!lines.length) return;
+      parts.push('<h4>' + pair[1] + '</h4>');
+      parts.push('<div>' + lines.map(function (ln) {
+        return String(ln).replace(/<b>|<\/b>/g, '').replace(/<font[^>]*>|<\/font>/g, '')
+          .replace(/<br\s*\/?>/g, '<br>');
+      }).join('<br>') + '</div>');
+    });
+    parts.push('<p style="color:var(--fg-3);font-size:11.5px;margin-top:16px">長押しで表示しています。タップすると編成に入ります。</p>');
+    document.querySelector('#skillTitle').textContent = c.name + ' — スキル';
+    document.querySelector('#skillBody').innerHTML = parts.join('');
+    document.querySelector('#skillSheet').hidden = false;
   }
 
   /* ------------------------------------------------------------ unit sheet */
@@ -713,6 +768,20 @@
     return { start: start, end: start + visible, max: maxT };
   }
 
+  function coverAt(unit, frame) {
+    var s = unit.hpSeries || [[0, unit.hp, unit.coverHp]];
+    if (frame <= s[0][0]) return s[0][2] || 0;
+    for (var i = 1; i < s.length; i++) {
+      if (s[i][0] >= frame) {
+        var a = s[i - 1], b = s[i];
+        var t = (frame - a[0]) / Math.max(1, b[0] - a[0]);
+        var av = a[2] == null ? 0 : a[2], bv = b[2] == null ? 0 : b[2];
+        return av + (bv - av) * t;
+      }
+    }
+    return s[s.length - 1][2] || 0;
+  }
+
   function hpAt(unit, frame) {
     var s = unit.hpSeries || [[0, unit.hpMax]];
     if (frame <= s[0][0]) return s[0][1];
@@ -793,6 +862,11 @@
       g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + w, y); g.stroke();
     });
 
+    g.save();
+    g.beginPath();
+    g.rect(x0, y0 - 2, w, h + 4);
+    g.clip();
+
     ['A', 'B'].forEach(function (side) {
       var team = s.teams[side];
       var color = side === 'A' ? '#3ddbb4' : '#f7a24c';
@@ -836,6 +910,7 @@
       g.fillText((side === 'A' ? '自 ' : '相 ') + Math.round(ratio * 100) + '%',
         side === 'A' ? x0 + 4 : x0 + w - 4, y0 + 13);
     });
+    g.restore();
   }
 
   function drawBurstTicks(g, xOf, x0, y, w) {
@@ -899,6 +974,11 @@
       rows.push({ side: 'B', u: s.teams.B[r], i: r });
     }
 
+    g.save();
+    g.beginPath();
+    g.rect(x0, y0 - 4, w, laneH * rows.length + 8);
+    g.clip();
+
     rows.forEach(function (row, idx) {
       var top = y0 + idx * laneH;
       var u = row.u;
@@ -920,6 +1000,17 @@
         last = x1;
       }
 
+      // 遮蔽物を上に細く重ねる（本体HPとは別枠）
+      var covColor = row.side === 'A' ? '#3ddbb4' : '#f7a24c';
+      g.fillStyle = covColor + '3a';
+      var lastC = bx;
+      for (var cf = 0; cf <= n; cf += 2) {
+        var cv = Math.max(0, coverAt(u, cf)) / (u.coverMax || 1);
+        var cx = bx + (xOf(cf) - x0) / w * bw;
+        g.fillRect(lastC, barY - 4, Math.max(0, cx - lastC), 3 * cv);
+        lastC = cx;
+      }
+
       g.fillStyle = row.side === 'A' ? '#bfeedd' : '#f8d9b6';
       g.font = '10px "Yu Gothic UI", system-ui, sans-serif';
       g.textAlign = 'right';
@@ -939,6 +1030,7 @@
         }
       }
     });
+    g.restore();
   }
 
   var images = {};
@@ -964,6 +1056,7 @@
     };
     $('#speed').onchange = function () { store.speed = parseFloat($('#speed').value); };
     var scrub = $('#scrub');
+    scrub.step = '1';
     scrub.addEventListener('input', function () {
       store.playing = false;
       $('#playBtn').textContent = '▶';
@@ -1074,6 +1167,16 @@
   }
 
   /* ------------------------------------------------------------------ misc */
+  function renderModeHint() {
+    var el2 = document.querySelector('#modeHint');
+    if (!el2) return;
+    el2.textContent = {
+      champion: '全員Lv400固定 ・ 戦闘力補正なし',
+      rookie: '実際のレベル ・ 戦闘力補正あり',
+      special: '実際のレベル ・ 編成ごとに戦闘力補正'
+    }[store.mode] || '';
+  }
+
   function syncEditSeg() {
     document.querySelectorAll('#editSeg .seg').forEach(function (b) {
       b.classList.toggle('on', b.dataset.side === store.editSide);
@@ -1128,6 +1231,7 @@
           });
         }
         persist();
+        renderModeHint();
         renderAll();
         scheduleSim();
       });
@@ -1154,6 +1258,16 @@
     document.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape') {
         document.querySelectorAll('.modal').forEach(function (m) { m.hidden = true; });
+      }
+      var tag = document.activeElement.tagName;
+      if ((ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') && !/input|textarea|select/i.test(tag) && store.sample) {
+        ev.preventDefault();
+        var step = ev.shiftKey ? 10 : 1;
+        store.frame = Math.max(0, Math.min(store.sample.frames, store.frame + (ev.key === 'ArrowRight' ? step : -step)));
+        store.playing = false;
+        $('#playBtn').textContent = '▶';
+        drawTimeline(); renderBoard('A'); renderBoard('B'); updateReadout();
+        return;
       }
       if (ev.code === 'Space' && !/input|textarea|select/i.test(document.activeElement.tagName)) {
         ev.preventDefault();
@@ -1184,6 +1298,7 @@
     });
 
     syncEditSeg();
+    renderModeHint();
     renderAll();
     setZoom(1);
     runSim();

@@ -205,7 +205,7 @@ window.Engine = (function () {
         });
       });
     }
-    u.hpSeries.push([0, u.hp]);
+    u.hpSeries = [[0, u.hp, u.coverHp]];
     return u;
   }
 
@@ -872,6 +872,18 @@ window.Engine = (function () {
         });
       });
 
+      // タイムライン用の記録（値が動いたフレームだけ残す）
+      [A, B].forEach(function (team) {
+        team.forEach(function (u) {
+          var last = u.hpSeries[u.hpSeries.length - 1];
+          var hp = Math.max(0, u.hp);
+          var cov = Math.max(0, u.coverHp);
+          if (!last || last[1] !== hp || last[2] !== cov) {
+            u.hpSeries.push([frame, hp, cov]);
+          }
+        });
+      });
+
       var aliveA = alive(A).length, aliveB = alive(B).length;
       if (!aliveA || !aliveB) {
         winner = !aliveA && !aliveB ? 'draw' : (aliveA ? 'A' : 'B');
@@ -885,6 +897,17 @@ window.Engine = (function () {
       winner = Math.abs(ra - rb) < 0.02 ? 'draw' : (ra > rb ? 'A' : 'B');
       events.push({ frame: frame, kind: 'timeout' });
     }
+
+    [A, B].forEach(function (team) {
+      team.forEach(function (u) {
+        var last = u.hpSeries[u.hpSeries.length - 1];
+        var hp = Math.max(0, u.hp);
+        var cov = Math.max(0, u.coverHp);
+        if (!last || last[0] !== frame || last[1] !== hp || last[2] !== cov) {
+          u.hpSeries.push([frame, hp, cov]);
+        }
+      });
+    });
 
     return {
       winner: winner,

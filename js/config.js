@@ -28,6 +28,14 @@
  * 遮蔽物は「射撃していないあいだ身を隠す板」で、実質もう一本のHPバーです。
  * 単体攻撃はまずここが受け、バーストの範囲攻撃は貫通します。
  * レベル400での実数値は公開されていないため比率で持ちます。
- * 初期値1.0は「遮蔽物のHPはニケの最大HPとほぼ同じ」というコミュニティの実測にもとづきます。
+ * 実戦では遮蔽物はそこまで硬くなく、バーストの範囲攻撃は完全に貫通します。
+ * 初期値は決着時間が実戦のテンポになるように置いた暫定値です。
  */
-window.COVER_HP_RATIO = window.COVER_HP_RATIO == null ? 1.0 : window.COVER_HP_RATIO;
+window.COVER_HP_RATIO = window.COVER_HP_RATIO == null ? 0.35 : window.COVER_HP_RATIO;
+
+/* BlablaLink 同期の中継サーバー.
+ *
+ * 例: window.SYNC_PROXY = 'https://nikke-sync.example.workers.dev';
+ * 同梱の tools/cloudflare-worker.js を Cloudflare Workers に置くと、そのURLになる。
+ */
+window.SYNC_PROXY = window.SYNC_PROXY || '';

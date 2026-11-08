@@ -307,6 +307,117 @@ window.Sync = (function () {
 })();
 
 /* ------------------------------------------------------------------ UI */
+
+/* URL を貼るだけで同期するための取得経路.
+ *
+ * blablalink のゲームAPIは blablalink.com 以外のオリジンに CORS ヘッダを返さない。
+ * そのため、静的サイトからは中継なしでは呼べない。中継先は js/config.js の
+ * SYNC_PROXY に置く（同梱の tools/cloudflare-worker.js をそのまま配備すればよい）。
+ */
+window.SyncFetch = (function () {
+  'use strict';
+
+  var COMMON = JSON.stringify({
+    game_id: '16', intl_game_id: '29080',
+    source: 'pc_web', env: 'prod', language: 'ja'
+  });
+
+  function openidFrom(text) {
+    if (!text) return null;
+    var m = String(text).match(/openid=([^&\s]+)/);
+    if (m) {
+      try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+    }
+    if (/^[A-Za-z0-9+/=]{20,}$/.test(String(text).trim())) return String(text).trim();
+    return null;
+  }
+
+  function digitsOf(openid) {
+    var m = String(openid).match(/\d{19}/);
+    return m ? m[0] : null;
+  }
+
+  function call(path, body) {
+    var proxy = window.SYNC_PROXY;
+    if (!proxy) return Promise.reject(new Error('中継先が未設定です（js/config.js の SYNC_PROXY）'));
+    var base = String(proxy).replace(/\/$/, '');
+    return fetch(base + '?path=' + encodeURIComponent(path), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: body || {}, common: COMMON })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('中継先が ' + r.status + ' を返しました');
+      return r.json();
+    });
+  }
+
+  var AREAS = [81, 82, 83, 84, 85];
+
+  function fetchByUrl(url) {
+    var openid = openidFrom(url);
+    if (!openid) return Promise.reject(new Error('URL から openid を読み取れませんでした'));
+    var digits = digitsOf(openid) || openid;
+
+    function chars(area) {
+      return call('/api/game/proxy/Game/GetUserCharacters', {
+        intl_open_id: Number(digits), nikke_area_id: area
+      });
+    }
+
+    return call('/api/game/proxy/Game/GetSavedRoleInfo', {}).then(function (role) {
+      var a = role && role.data && role.data.role_info && role.data.role_info.area_id;
+      return a || AREAS[0];
+    }).catch(function () { return AREAS[0]; }).then(function (area) {
+      return chars(area).then(function (res) {
+        var list = res && res.data && (res.data.characters || res.data.list);
+        if (list && list.length) return { list: list, area: area };
+        return chars(AREAS[0]).then(function (res2) {
+          var l2 = res2 && res2.data && (res2.data.characters || res2.data.list);
+          if (!l2 || !l2.length) throw new Error('キャラクター情報が空でした');
+          return { list: l2, area: AREAS[0] };
+        });
+      });
+    }).then(function (got) {
+      var codes = got.list.map(function (c) { return c.name_code; }).filter(Boolean);
+      return call('/api/game/proxy/Game/GetUserCharacterDetails', {
+        intl_open_id: Number(digits), nikke_area_id: got.area, name_codes: codes
+      }).then(function (res) {
+        var dl = (res && res.data && (res.data.character_details || res.data.characters || res.data.list)) || [];
+        return {
+          type: 'nikesmi-sync/v2', version: 2, source: 'blablalink-url',
+          area_id: got.area,
+          characters: got.list.map(function (c) {
+            var d = dl.filter(function (x) { return x.name_code === c.name_code; })[0] || {};
+            var pick = function (k) { return Number(d[k] != null ? d[k] : c[k]) || 0; };
+            return {
+              name_code: Number(c.name_code),
+              level: pick('lv'), limit_break: pick('grade'), core: pick('core'),
+              affection: pick('attractive_lv'),
+              skills: { s1: pick('skill1_lv'), s2: pick('skill2_lv'), burst: pick('ulti_skill_lv') },
+              cube_lv: pick('harmony_cube_lv'),
+              equip: {
+                head: pick('head_equip_lv'), body: pick('torso_equip_lv'),
+                arm: pick('arm_equip_lv'), leg: pick('leg_equip_lv')
+              },
+              options: [
+                d.head_equip_option1_id, d.head_equip_option2_id, d.head_equip_option3_id,
+                d.torso_equip_option1_id, d.torso_equip_option2_id, d.torso_equip_option3_id,
+                d.arm_equip_option1_id, d.arm_equip_option2_id, d.arm_equip_option3_id,
+                d.leg_equip_option1_id, d.leg_equip_option2_id, d.leg_equip_option3_id
+              ].map(Number),
+              favorite_item_lv: pick('favorite_item_lv'),
+              treasure: !!Number(d.favorite_item_tid || c.favorite_item_tid),
+              combat: pick('combat')
+            };
+          })
+        };
+      });
+    });
+  }
+
+  return { openidFrom: openidFrom, fetchByUrl: fetchByUrl };
+})();
+
 window.SyncUI = (function () {
   'use strict';
 
@@ -318,13 +429,7 @@ window.SyncUI = (function () {
     var d = ev.data;
     if (!d || (d.type !== window.Sync.PROTOCOL && d.type !== window.Sync.LEGACY)) return;
     if (d.error) { status('失敗: ' + d.error); return; }
-    var norm = window.Sync.normalise(d);
-    if (!norm) { status('受け取った内容を読み取れませんでした'); return; }
-    var result = window.Sync.applyTo(norm);
-    window.Sync.save(result);
-    if (window.Nikesmi) window.Nikesmi.setSync(result);
-    status('取り込みました — ' + Object.keys(result.owned).length + '体');
-    setTimeout(function () { document.querySelector('#syncSheet').hidden = true; }, 900);
+    importPayload(d);
   }
 
   function status(text) {
@@ -335,51 +440,68 @@ window.SyncUI = (function () {
   function open() {
     var body = document.querySelector('#syncBody');
     body.innerHTML = [
-      '<p>BlablaLink の API は Cookie が必要で、しかも blablalink.com 以外のページからは呼べません。',
-      'そのため、このアプリが代わりに取りに行くことはできません。',
-      'BlablaLink のタブで動くブックマークレットに取得してもらい、結果だけを受け取ります。Cookie はブラウザの外に出ません。</p>',
-      '<h3>手順</h3>',
-      '<ol>',
-      '<li><button class="tbtn-ghost" id="openBL">BlablaLink を開く</button>' +
-      '<span class="hint" style="font-size:11.5px;color:var(--fg-3);margin-left:8px">ポップアップがブロックされたら許可してください</span></li>',
-      '<li>下のボタンをブックマークバーへドラッグ（初回だけ）<br>' +
-      '<a class="bmk" id="bmk" href="#" onclick="return false" style="display:inline-block;margin-top:6px;background:var(--self);color:#04140f;text-decoration:none;padding:5px 14px;border-radius:4px;font-weight:700;font-size:12px;cursor:grab">NIKESMI 同期</a>' +
-      '<span class="hint" style="font-size:11.5px;color:var(--fg-3);margin-left:8px">ブックマークバーは Ctrl+Shift+B</span></li>',
-      '<li>ポップアップ側でそのブックマークを押す</li>',
-      '</ol>',
-      '<p id="syncStatus" style="color:var(--fg-3)">待機中…</p>',
-      '<h3>うまくいかないとき</h3>',
-      '<p>ブックマークレットが使えない環境（モバイルなど）では、JSON ファイルをここにドロップしてください。</p>',
-      '<div id="dropzone" style="border:1px dashed var(--line);border-radius:5px;padding:20px;text-align:center;color:var(--fg-3);cursor:pointer">JSON をドロップ / クリックで選択' +
-      '<input type="file" id="syncFile" accept="application/json,.json" hidden></div>'
+      '<p>BlablaLink のプロフィールURLを貼ると、所持ニケと育成状況を取り込みます。</p>',
+      '<div style="display:flex;gap:8px;margin:14px 0">',
+      '<input id="syncUrl" type="text" placeholder="https://www.blablalink.com/user?openid=..." ',
+      'style="flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:8px 11px;outline:none">',
+      '<button id="syncGo" class="tbtn-ghost" style="white-space:nowrap">取り込む</button></div>',
+      '<p id="syncStatus" style="color:var(--fg-3);font-size:12px">待機中…</p>',
+      '<h3>はじめての人へ</h3>',
+      '<p style="font-size:12px">BlablaLink のAPIは、ほかのサイトから直接呼べないようにブロックされています。' +
+      'そのため中継サーバーが要ります。同梱の <code>tools/cloudflare-worker.js</code> を Cloudflare Workers に置き、' +
+      'そのURLを <code>js/config.js</code> の <code>SYNC_PROXY</code> に書いてください。1回設定すれば、以後はURLを貼るだけです。</p>',
+      '<h3>中継しない方法</h3>',
+      '<p style="font-size:12px">下のボタンをブックマークバーにドラッグし、BlablaLink のページで押してください。' +
+      'Cookie はブラウザの外に出ません。</p>',
+      '<p><a class="bmk" id="bmk" href="#" onclick="return false" ',
+      'style="display:inline-block;background:var(--self);color:#04140f;text-decoration:none;padding:5px 14px;border-radius:4px;font-weight:700;font-size:12px;cursor:grab">NIKESMI 同期</a></p>',
+      '<h3>JSON をドロップ</h3>',
+      '<div id="dropzone" style="border:1px dashed var(--line);border-radius:5px;padding:16px;text-align:center;color:var(--fg-3);cursor:pointer">',
+      'JSON をドロップ / クリックで選択<input type="file" id="syncFile" accept="application/json,.json" hidden></div>'
     ].join('\n');
 
-    var bmk = document.querySelector('#bmk');
-    bmk.href = window.Sync.bookmarkletHref;
+    document.querySelector('#bmk').href = window.Sync.bookmarkletHref;
 
-    document.querySelector('#openBL').onclick = function () {
-      popup = window.open('https://www.blablalink.com/user', 'blablalink_sync',
-        'width=1100,height=820');
-      if (!popup) status('ポップアップがブロックされました');
+    var input = document.querySelector('#syncUrl');
+    try { input.value = localStorage.getItem('nikesmi.syncUrl') || ''; } catch (e) { }
+
+    document.querySelector('#syncGo').onclick = function () {
+      var url = input.value.trim();
+      if (!url) { status('URLを入れてください'); return; }
+      try { localStorage.setItem('nikesmi.syncUrl', url); } catch (e) { }
+      status('取得中…');
+      window.SyncFetch.fetchByUrl(url).then(function (payload) {
+        importPayload(payload);
+      }).catch(function (e) {
+        status('失敗: ' + (e && e.message ? e.message : e));
+      });
     };
 
     var zone = document.querySelector('#dropzone');
     var file = document.querySelector('#syncFile');
     zone.onclick = function () { file.click(); };
     zone.ondragover = function (e) { e.preventDefault(); };
-    zone.ondrop = function (e) {
-      e.preventDefault();
-      if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
-    };
+    zone.ondrop = function (e) { e.preventDefault(); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); };
     file.onchange = function () { if (file.files[0]) readFile(file.files[0]); };
 
     function readFile(f) {
       var fr = new FileReader();
-      fr.onload = function () { receive({ origin: window.Sync.ORIGIN, source: popup, data: safeParse(fr.result) }); };
+      fr.onload = function () { importPayload(safeParse(fr.result)); };
       fr.readAsText(f);
     }
 
     document.querySelector('#syncSheet').hidden = false;
+  }
+
+  function importPayload(d) {
+    if (!d) { status('内容を読み取れませんでした'); return; }
+    var norm = window.Sync.normalise(d);
+    if (!norm) { status('内容を読み取れませんでした'); return; }
+    var result = window.Sync.applyTo(norm);
+    window.Sync.save(result);
+    if (window.Nikesmi) window.Nikesmi.setSync(result);
+    status('取り込みました — ' + Object.keys(result.owned).length + '体');
+    setTimeout(function () { document.querySelector('#syncSheet').hidden = true; }, 800);
   }
 
   function safeParse(text) {
