@@ -440,41 +440,35 @@ window.SyncUI = (function () {
   function open() {
     var body = document.querySelector('#syncBody');
     body.innerHTML = [
-      '<p>BlablaLink のプロフィールURLを貼ると、所持ニケと育成状況を取り込みます。</p>',
-      '<div style="display:flex;gap:8px;margin:14px 0">',
-      '<input id="syncUrl" type="text" placeholder="https://www.blablalink.com/user?openid=..." ',
-      'style="flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:8px 11px;outline:none">',
-      '<button id="syncGo" class="tbtn-ghost" style="white-space:nowrap">取り込む</button></div>',
+      '<h3>先に結論</h3>',
+      '<p><b>URLを貼るだけの同期はできません。</b> BlablaLink のゲームAPIは、' +
+      'URLに含まれるIDだけでは応答せず、ログイン中のセッションCookieを要求します（実際に叩くと <code>game not login</code> が返ります）。' +
+      'Cookieは他のサイトから使えない決まりなので、静的サイトから直接取りに行く方法はありません。</p>',
+      '<p>いちばん安全なのは、<b>BlablaLinkのページ上で動くブックマークレット</b>です。' +
+      'Cookieはブラウザの外に出ません。</p>',
+      '<h3>手順</h3>',
+      '<ol style="padding-left:20px;line-height:2">',
+      '<li><button class="tbtn-ghost" id="openBL">BlablaLink を開く</button> でログインする</li>',
+      '<li>下のボタンをブックマークバーへドラッグする（初回だけ。Ctrl+Shift+B でバーが出ます）' +
+      '<br><a class="bmk" id="bmk" href="#" onclick="return false" ' +
+      'style="display:inline-block;margin-top:6px;background:var(--self);color:#04140f;text-decoration:none;padding:6px 16px;border-radius:4px;font-weight:700;font-size:12px;cursor:grab">NIKESMI 同期</a></li>',
+      '<li>BlablaLink のタブで、そのブックマークを押す</li>',
+      '</ol>',
       '<p id="syncStatus" style="color:var(--fg-3);font-size:12px">待機中…</p>',
-      '<h3>はじめての人へ</h3>',
-      '<p style="font-size:12px">BlablaLink のAPIは、ほかのサイトから直接呼べないようにブロックされています。' +
-      'そのため中継サーバーが要ります。同梱の <code>tools/cloudflare-worker.js</code> を Cloudflare Workers に置き、' +
-      'そのURLを <code>js/config.js</code> の <code>SYNC_PROXY</code> に書いてください。1回設定すれば、以後はURLを貼るだけです。</p>',
-      '<h3>中継しない方法</h3>',
-      '<p style="font-size:12px">下のボタンをブックマークバーにドラッグし、BlablaLink のページで押してください。' +
-      'Cookie はブラウザの外に出ません。</p>',
-      '<p><a class="bmk" id="bmk" href="#" onclick="return false" ',
-      'style="display:inline-block;background:var(--self);color:#04140f;text-decoration:none;padding:5px 14px;border-radius:4px;font-weight:700;font-size:12px;cursor:grab">NIKESMI 同期</a></p>',
-      '<h3>JSON をドロップ</h3>',
-      '<div id="dropzone" style="border:1px dashed var(--line);border-radius:5px;padding:16px;text-align:center;color:var(--fg-3);cursor:pointer">',
-      'JSON をドロップ / クリックで選択<input type="file" id="syncFile" accept="application/json,.json" hidden></div>'
+      '<h3>うまくいかない環境では</h3>',
+      '<div id="dropzone" style="border:1px dashed var(--line);border-radius:5px;padding:16px;text-align:center;color:var(--fg-3);cursor:pointer">' +
+      '同期用JSONをドロップ / クリックで選択<input type="file" id="syncFile" accept="application/json,.json" hidden></div>',
+      '<h3>上級者向け</h3>',
+      '<p style="font-size:12px;color:var(--fg-3)">自前の中継サーバーを立てる場合は <code>tools/cloudflare-worker.js</code> を Cloudflare Workers に置き、' +
+      'そのURLを <code>js/config.js</code> の <code>SYNC_PROXY</code> に書けば、URLを貼るだけで取り込めます。' +
+      'ただし中継サーバーにはあなたのCookieを渡すことになるため、自分で立てたもの以外は使わないでください。</p>'
     ].join('\n');
 
     document.querySelector('#bmk').href = window.Sync.bookmarkletHref;
 
-    var input = document.querySelector('#syncUrl');
-    try { input.value = localStorage.getItem('nikesmi.syncUrl') || ''; } catch (e) { }
-
-    document.querySelector('#syncGo').onclick = function () {
-      var url = input.value.trim();
-      if (!url) { status('URLを入れてください'); return; }
-      try { localStorage.setItem('nikesmi.syncUrl', url); } catch (e) { }
-      status('取得中…');
-      window.SyncFetch.fetchByUrl(url).then(function (payload) {
-        importPayload(payload);
-      }).catch(function (e) {
-        status('失敗: ' + (e && e.message ? e.message : e));
-      });
+    document.querySelector('#openBL').onclick = function () {
+      popup = window.open('https://www.blablalink.com/user', 'blablalink_sync', 'width=1100,height=820');
+      if (!popup) status('ポップアップがブロックされました');
     };
 
     var zone = document.querySelector('#dropzone');
