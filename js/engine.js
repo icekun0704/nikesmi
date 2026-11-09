@@ -788,6 +788,12 @@ window.Engine = (function () {
     return Number(trig.stage) === n;
   }
 
+  /* フルバーストタイム中だけ発動するトリガーの判定 */
+  function inFullBurst(u, ctx) {
+    var st = u.side === 'A' ? ctx.teamA : ctx.teamB;
+    return !!(st && st.fullBurst);
+  }
+
   function runEventSkills(u, team, enemies, frame, ctx, kind, stage) {
     for (var s = 0; s < u.skillState.length; s++) {
       var sk = u.skillState[s];
@@ -799,6 +805,7 @@ window.Engine = (function () {
         var trig = bs.block.trigger || {};
         if (trig.kind !== kind) continue;
         if (!stageMatches(trig, stage, false)) continue;
+        if (trig.duringFullBurst && !inFullBurst(u, ctx)) continue;
         if (trig.chance != null && ctx.rng() * 100 > trig.chance) continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
         if (!nthOk(bs, trig)) continue;

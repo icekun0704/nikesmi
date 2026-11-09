@@ -819,6 +819,7 @@ def _parse_trigger(text, slot, ct):
         (r'^フルチャージ攻撃が' + NUM + r'回命中した時', None, 'fullChargeN'),
         (r'^最後の弾丸(?:が)?命中した時', {'kind': 'lastBullet'}),
         (r'^最後の弾丸を発射した時', {'kind': 'lastBullet'}),
+        (r'^フルバーストタイム中に通常攻撃した時', {'kind': 'attack', 'duringFullBurst': True}),
         (r'^通常攻撃が命中した時', {'kind': 'attack'}),
         (r'^通常攻撃をした時', {'kind': 'attack'}),
         (r'^通常攻撃時', {'kind': 'attack'}),
