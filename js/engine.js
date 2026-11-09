@@ -762,6 +762,8 @@ window.Engine = (function () {
         var trig = bs.block.trigger || {};
         if (trig.kind !== 'counter' || trig.on !== on) continue;
         var n = trig.n || 1;
+        // まだ1回も起きていないうちは発動しない（0 は何の倍数でもあるため）
+        if (!u.counters[on]) continue;
         if (u.counters[on] % n !== 0) continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
         if (!nthOk(bs, trig)) continue;
@@ -1098,11 +1100,14 @@ window.Engine = (function () {
 
           var primary = pickTarget(u, enemies, frame);
           u._lastTarget = primary;
+          var hitSet = [];
           if (primary) {
             var weaponMult = (u.char.stats && u.char.stats.weaponDamage) || 10;
             var chargeMult = (u.weapon === 'RL' || u.weapon === 'SR')
               ? ((u.char.stats && u.char.stats.maxCharge) || 250) / 100 : null;
 
+            var damagedThisShot = [];
+            function noteHit(t) { if (t && damagedThisShot.indexOf(t) < 0) damagedThisShot.push(t); }
             if (u.weapon === 'RL') {
               var range = (u.char.rlExplosionRange == null ? 1 : u.char.rlExplosionRange);
               range += Math.round((range) * sumStat(u, 'explosionRangePct') / 100);
@@ -1112,6 +1117,7 @@ window.Engine = (function () {
                   multiplierPct: weaponMult, chargeMult: chargeMult, rng: rng,
                   scale: scale, teamA: state.A, teamB: state.B
                 });
+                noteHit(targets[t]);
               }
             } else if (u.weapon === 'SG') {
               var pellets = 10;
@@ -1121,6 +1127,7 @@ window.Engine = (function () {
                   scale: scale, teamA: state.A, teamB: state.B
                 });
               }
+              noteHit(primary);
             } else {
               /* 貫通: 弾が敵を突き抜ける。対象より後ろの敵すべてに当たる。
                * 「何体まで」という上限は無い。 */
@@ -1146,11 +1153,12 @@ window.Engine = (function () {
                   scale: scale, teamA: state.A, teamB: state.B,
                   isPierce: hh > 0, noDef: noDef
                 });
+                noteHit(hitList[hh]);
               }
             }
 
-            // hit counters on the target side
-            primary.counters.hitsTaken += shot.hits;
+            // 被弾した対象を覚えておく（回数は1発につき1回）
+            hitSet = damagedThisShot;
           }
 
           var _sp = specialOf(u);
@@ -1198,8 +1206,9 @@ window.Engine = (function () {
           runCounterSkills(u, team, enemies, frame, ctx, 'attackShots');
           runCounterSkills(u, team, enemies, frame, ctx, 'attackHits');
 
-          team.forEach(function (m) {
-            if (m.alive) runCounterSkills(m, team, enemies, frame, ctx, 'hitsTaken');
+          hitSet.forEach(function (t) { t.counters.hitsTaken += 1; });
+          hitSet.forEach(function (t) {
+            if (t.alive && t.hp > 0) runCounterSkills(t, team, enemies, frame, ctx, 'hitsTaken');
           });
         });
       });
