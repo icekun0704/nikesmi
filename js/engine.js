@@ -775,6 +775,7 @@ window.Engine = (function () {
         // まだ1回も起きていないうちは発動しない（0 は何の倍数でもあるため）
         if (!count) continue;
         if (count % n !== 0) continue;
+        if (trig.chance != null && ctx.rng() * 100 > trig.chance) continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
         if (!nthOk(bs, trig)) continue;
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
@@ -793,6 +794,7 @@ window.Engine = (function () {
         var trig = bs.block.trigger || {};
         if (trig.kind !== kind) continue;
         if (!stageMatches(trig, stage, isSelf === undefined ? true : isSelf)) continue;
+        if (trig.chance != null && ctx.rng() * 100 > trig.chance) continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
         if (!nthOk(bs, trig)) continue;
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
