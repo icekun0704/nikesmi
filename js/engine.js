@@ -389,7 +389,7 @@ window.Engine = (function () {
     var dmg = base * (opts.multiplierPct / 100) * bonus * element * charge * (1 + up / 100) * taken;
     dmg *= opts.scale == null ? 1 : opts.scale;
     return applyDamage(target, dmg, attacker, frame,
-      Object.assign({ piercesCover: !!opts.isBurst || !!opts.ignoreDef }, opts));
+      Object.assign({ piercesCover: (!!opts.isBurst && !!opts.aoe) || !!opts.ignoreDef }, opts));
   }
 
   function heal(u, amount, frame) {
@@ -530,6 +530,8 @@ window.Engine = (function () {
             multiplierPct: effect.value,
             ignoreDef: ignoreDef,
             isBurst: effect.type === 'burst',
+            /* 遮蔽物を貫くのは範囲攻撃だけ。単体のバーストは遮蔽物が受ける。 */
+            aoe: targets.length > 1,
             isSustained: effect.type === 'sustained',
             isPierce: effect.type === 'pierce',
             isDistributed: effect.type === 'distributed',
