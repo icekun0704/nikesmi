@@ -18,6 +18,8 @@
   'use strict';
 
   (window.SPECIALS = window.SPECIALS || {})[91] = {
+  /* 被ダメージ軽減と防御力バフはここで実装している */
+  suppress: { skill2: [1], burst: [1] },
     init: function (u, E) {
       u._ludLastFBFrame = -1;
     },

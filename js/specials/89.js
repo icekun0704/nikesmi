@@ -40,6 +40,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[89] = {
+  /* 被ダメージ軽減はここで実装している */
+  suppress: { skill2: [1] },
     init: function (u, E) {
       u._rougeFC8 = 0;
       u._rougeFC30 = 0;

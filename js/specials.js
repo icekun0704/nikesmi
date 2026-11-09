@@ -12043,7 +12043,8 @@ function powerBloodStacks(u) {
 
 (window.SPECIALS = window.SPECIALS || {})[50] = {
   /* 血の魔人フルスタック時の1584%はここで実装している（パーサ側は条件を見ない） */
-  suppress: { burst: [1] },
+  /* 18回攻撃時の爆発範囲と弾丸チャージはここで条件つきで実装している */
+  suppress: { burst: [1], skill2: [0] },
   init: function (u, E) {
     var src = window.SKILL_DB && window.SKILL_DB[u.skillKey];
     if (src) {
@@ -13593,6 +13594,8 @@ function powerBloodStacks(u) {
  */
 (function () {
   (window.SPECIALS = window.SPECIALS || {})[67] = {
+  /* 味方全体の防御力バフはここで実装している */
+  suppress: { burst: [0] },
     init: function (u, E) {
       u.mary = {};
     },
@@ -14878,6 +14881,8 @@ function powerBloodStacks(u) {
   }
 
   (window.SPECIALS = window.SPECIALS || {})[89] = {
+  /* 被ダメージ軽減はここで実装している */
+  suppress: { skill2: [1] },
     init: function (u, E) {
       u._rougeFC8 = 0;
       u._rougeFC30 = 0;
@@ -15205,6 +15210,8 @@ function powerBloodStacks(u) {
   'use strict';
 
   (window.SPECIALS = window.SPECIALS || {})[91] = {
+  /* 被ダメージ軽減と防御力バフはここで実装している */
+  suppress: { skill2: [1], burst: [1] },
     init: function (u, E) {
       u._ludLastFBFrame = -1;
     },
@@ -15415,6 +15422,8 @@ function powerBloodStacks(u) {
  */
 (function () {
   (window.SPECIALS = window.SPECIALS || {})[99] = {
+  /* ハッキングコードの攻撃力バフと、対象への攻撃力・防御力デバフはここで実装している */
+  suppress: { skill1: [0], skill2: [0] },
     init: function (u, E) { u.exia = { stacks: 0, until: -1, charged: false }; },
 
     onShot: function (u, E, frame) {

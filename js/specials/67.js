@@ -8,6 +8,8 @@
  */
 (function () {
   (window.SPECIALS = window.SPECIALS || {})[67] = {
+  /* 味方全体の防御力バフはここで実装している */
+  suppress: { burst: [0] },
     init: function (u, E) {
       u.mary = {};
     },

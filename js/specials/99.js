@@ -9,6 +9,8 @@
  */
 (function () {
   (window.SPECIALS = window.SPECIALS || {})[99] = {
+  /* ハッキングコードの攻撃力バフと、対象への攻撃力・防御力デバフはここで実装している */
+  suppress: { skill1: [0], skill2: [0] },
     init: function (u, E) { u.exia = { stacks: 0, until: -1, charged: false }; },
 
     onShot: function (u, E, frame) {
