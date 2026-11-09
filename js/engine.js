@@ -675,7 +675,7 @@ window.Engine = (function () {
       applyEffect(u, b.effects[i], targets, team, enemies, frame,
         Object.assign({
           key: u.side + u.pos + ':' + sk.slot + ':' + state.blocks.indexOf(blockState),
-          scaleFactor: (u.skillScale && u.skillScale[sk.slot]) || 1
+          scaleFactor: (u.skillScale && u.skillScale[state.slot]) || 1
         }, ctx));
     }
     blockState.fired += 1;
