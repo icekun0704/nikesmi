@@ -6,3 +6,7 @@ _src/
 *.log
 node_modules/
 .claude/
+
+# Python キャッシュ
+__pycache__/
+*.pyc
