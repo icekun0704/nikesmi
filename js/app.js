@@ -646,6 +646,7 @@
         store.editSide = side;
         syncEditSeg();
         renderBoard('A'); renderBoard('B');
+        renderInspector();
       }
     );
 
@@ -1037,7 +1038,99 @@
     updateReadout();
   }
 
+  /* ------------------------------------------------------------ inspector */
+  /* 選んでいる枠のキャラのステータス。編成の下に常設する。 */
+  var OL_LABEL = {
+    atk: '攻撃', hp: 'HP', def: '防御', elementDmg: '有利コード',
+    critRate: '会心率', critDmg: '会心ダメージ', chargeDmg: 'チャージダメージ',
+    chargeSpeed: 'チャージ速度', magazine: '装弾数', hitRate: '命中率'
+  };
+
+  function renderInspector() {
+    var host = $('#inspector');
+    if (!host) return;
+    host.innerHTML = '';
+    var side = store.selected.side;
+    var entry = store.teams[side] && store.teams[side][store.selected.index];
+    if (!entry) {
+      host.appendChild(el('div', 'insp-empty', '枠を選ぶと、そのキャラのステータスが出ます'));
+      return;
+    }
+    var c = BY_ID[entry.charId];
+    if (!c) return;
+    var cfg = cfgOf(entry) || {};
+    var st = statsOf(entry, side) || { atk: 0, hp: 0, def: 0 };
+    var s2 = cfg.stats || {};
+    var sl = cfg.skillLevels || {};
+
+    var head = el('div', 'insp-head');
+    var p = portraitOf(c);
+    if (p) {
+      var im = document.createElement('img');
+      im.src = p; im.alt = '';
+      im.addEventListener('error', function () {
+        if (im.parentNode) im.parentNode.replaceChild(el('div', 'fallback', c.name.charAt(0)), im);
+      });
+      head.appendChild(im);
+    } else {
+      head.appendChild(el('div', 'fallback', c.name.charAt(0)));
+    }
+    var hw = el('div');
+    hw.appendChild(el('div', 'insp-name', c.name));
+    hw.appendChild(el('div', 'insp-tags',
+      [c.classType, c.weapon, c.element, 'バースト' + (burstStages(c)[0] || '')].join(' ・ ')));
+    head.appendChild(hw);
+    host.appendChild(head);
+
+    var grid = el('div', 'insp-grid');
+    function num(k, v) {
+      var d = el('div');
+      d.appendChild(el('div', 'insp-k', k));
+      d.appendChild(el('div', 'insp-v', Math.round(v).toLocaleString('ja-JP')));
+      grid.appendChild(d);
+    }
+    num('ATK', st.atk);
+    num('HP', st.hp);
+    num('DEF', st.def);
+    num('CP', cpOf(entry, side));
+    host.appendChild(grid);
+
+    var chips = el('div', 'insp-row');
+    function chip(k, v) {
+      var d = el('span', 'insp-chip');
+      d.appendChild(document.createTextNode(k + ' '));
+      d.appendChild(el('b', null, String(v)));
+      chips.appendChild(d);
+    }
+    chip('Lv', MODE[store.mode].levelLocked ? 400 : (s2.level || 400));
+    chip('凸', s2.lb || 0);
+    chip('コア', s2.core || 0);
+    chip('好感', s2.affection || 0);
+    chip('装備', s2.equipLevel || 0);
+    chip('キューブ', s2.cubeLevel || 0);
+    if (sl.skill1 || sl.skill2 || sl.burst) {
+      chip('スキル', (sl.skill1 || 10) + '/' + (sl.skill2 || 10) + '/' + (sl.burst || 10));
+    }
+    var ol = s2.overload || {};
+    Object.keys(OL_LABEL).forEach(function (k) {
+      var v = Number(ol[k]) || 0;
+      if (v) chip(OL_LABEL[k], (v > 0 ? '+' : '') + (Math.round(v * 10) / 10) + '%');
+    });
+    host.appendChild(chips);
+  }
+
   /* -------------------------------------------------------------- verdict */
+  /* 両チームが同じキャラ・同じ設定か（鏡合わせの試算かどうか） */
+  function sameTeams() {
+    var A = store.teams.A, B = store.teams.B;
+    for (var i = 0; i < 5; i++) {
+      var a = A[i], b = B[i];
+      if (!a && !b) continue;
+      if (!a || !b || a.charId !== b.charId) return false;
+    }
+    return A.some(function (e) { return !!e; });
+  }
+
   function renderVerdict(overrideText) {
     var v = $('#verdict');
     v.className = 'verdict';
@@ -1077,6 +1170,7 @@
     f('決着', (r.medianFrames / 60).toFixed(1) + '秒');
     var first = r.sample ? r.sample.bursts.filter(function (b) { return b.stage === 'B3'; })[0] : null;
     if (first) f('初回FB', (first.frame / 60).toFixed(2) + '秒');
+    if (sameTeams()) stats.appendChild(el('span', 'vsame', '同じ編成同士'));
     v.appendChild(stats);
 
     var bar = el('span', 'vbar');
@@ -1104,7 +1198,6 @@
           text: (e.killer ? e.killer + ' ▸ ' : '') + e.unit + ' 撃破'
         });
       }
-      else if (e.kind === 'timeout') evs.push({ frame: e.frame, kind: 'fb', side: 'A', text: '時間切れ' });
     });
     evs.sort(function (a, b) { return a.frame - b.frame; });
     evs.forEach(function (e) {
@@ -1357,7 +1450,7 @@
       g.fillStyle = color;
       g.font = '700 11px "Chakra Petch", system-ui, sans-serif';
       g.textAlign = side === 'A' ? 'left' : 'right';
-      g.fillText((side === 'A' ? '自 ' : '相 ') + Math.round(ratio * 100) + '%',
+      g.fillText((side === 'A' ? '自チーム ' : '相手チーム ') + Math.round(ratio * 100) + '%',
         side === 'A' ? x0 + 4 : x0 + w - 4, side === 'A' ? y0 + 11 : y0 + h - 4);
     });
     g.restore();
@@ -1642,6 +1735,7 @@
   function renderAll() {
     renderBoard('A'); renderBoard('B');
     renderRoster();
+    renderInspector();
     updateReadout();
   }
 
@@ -1650,6 +1744,7 @@
   function renderAllLight() {
     renderBoard('A'); renderBoard('B');
     updateRosterState();
+    renderInspector();
     updateReadout();
   }
 

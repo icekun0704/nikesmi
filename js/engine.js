@@ -24,7 +24,9 @@ window.Engine = (function () {
   var FB_FRAMES = 10 * FPS;
   var BURST_DELAY = 26;   /* ゲージMAX -> B1 は約0.433秒 (26F) */
   var BURST_GAP = 32;
-  var DEFAULT_MAX_FRAMES = 300 * FPS;   /* アリーナに時間切れは無い。ここは暴走を止めるためだけの上限。*/
+  /* アリーナに時間切れは無い。決着は「どちらかが全滅した瞬間」だけ。
+   * ここは無限ループを止めるための保険で、実測の最長は約40秒。 */
+  var DEFAULT_MAX_FRAMES = 600 * FPS;
 
   /* 属性は3すくみではなく5すくみ:
    *   灼熱 → 風圧 → 鉄甲 → 電撃 → 水冷 → 灼熱
@@ -1556,11 +1558,8 @@ window.Engine = (function () {
     }
 
     if (!winner) {
-      /* 時間切れは残りHPの多い側の勝ち。僅差でも必ず決着をつける
-       * （引き分けを残すと、勝率が「決まらない試合」で薄まる）。 */
-      var ra = hpRatio(A), rb = hpRatio(B);
-      winner = ra >= rb ? 'A' : 'B';
-      events.push({ frame: frame, kind: 'timeout' });
+      /* ここには通常来ない（保険）。来た場合も勝敗だけは決める。 */
+      winner = hpRatio(A) >= hpRatio(B) ? 'A' : 'B';
     }
 
     [A, B].forEach(function (team) {
@@ -1607,7 +1606,7 @@ window.Engine = (function () {
         ? run(teamB, teamA, Object.assign({}, opts, { seed: 1000 + i * 7919 }))
         : run(teamA, teamB, Object.assign({}, opts, { seed: 1000 + i * 7919 }));
       if (r.error) return r;
-      runs.push(r);
+      runs.push({ r: r, swap: swap });
       frames.push(r.frames);
       var w = swap ? (r.winner === 'A' ? 'B' : r.winner === 'B' ? 'A' : r.winner) : r.winner;
       if (w === 'A') winsA++;
@@ -1616,11 +1615,16 @@ window.Engine = (function () {
     }
     var sorted = frames.slice().sort(function (a, b) { return a - b; });
     var median = sorted[Math.floor(sorted.length / 2)];
-    var sample = runs[0], best = Infinity;
-    runs.forEach(function (r) {
-      var d = Math.abs(r.frames - median) + (r.winner === 'A' ? 0 : 120);
-      if (d < best) { best = d; sample = r; }
+    /* 表示に使う試合は、A/B を入れ替えずに回したものだけから選ぶ。
+     * 入れ替えた試合を選ぶと、画面のタイムラインとHPが
+     * 編成と左右逆に見えてしまう。 */
+    var sample = null, best = Infinity;
+    runs.forEach(function (x) {
+      if (x.swap) return;
+      var d = Math.abs(x.r.frames - median) + (x.r.winner === 'A' ? 0 : 120);
+      if (d < best) { best = d; sample = x.r; }
     });
+    if (!sample) sample = runs[0].r;
     return {
       trials: trials, winsA: winsA, winsB: winsB, draws: draws,
       winRate: (winsA + draws * 0.5) / trials,
