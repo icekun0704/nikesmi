@@ -43,6 +43,9 @@ files.forEach(function (file) {
   /* バフの数値（E.buff の第4引数が数値リテラルのときだけ） */
   var re3 = /E\.buff\(\s*[^,]+,\s*[^,]+,\s*[^,]+,\s*([0-9]+(?:\.[0-9]+)?)/g;
   while ((m = re3.exec(src))) nums[m[1]] = true;
+  /* 定数定義（var X = 123.45）も、本文にあるべき数値として扱う */
+  var re4 = /var\s+[A-Z][A-Z0-9_]*\s*=\s*([0-9]+\.[0-9]+)/g;
+  while ((m = re4.exec(src))) nums[m[1]] = true;
 
   Object.keys(nums).forEach(function (v) {
     var n = Number(v);
@@ -53,6 +56,9 @@ files.forEach(function (file) {
     if (one !== v && plain.indexOf(one) >= 0) return;
     var two = String(Math.round(n * 100) / 100);
     if (two !== v && plain.indexOf(two) >= 0) return;
+    /* 250% を 2.5 として持つような単位変換も許す */
+    var pct = String(Math.round(n * 100));
+    if (plain.indexOf(pct) >= 0) return;
     suspects.push({ name: c.name, file: file, value: v });
   });
 });
