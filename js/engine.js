@@ -24,7 +24,7 @@ window.Engine = (function () {
   var FB_FRAMES = 10 * FPS;
   var BURST_DELAY = 26;   /* ゲージMAX -> B1 は約0.433秒 (26F) */
   var BURST_GAP = 32;
-  var DEFAULT_MAX_FRAMES = 180 * FPS;
+  var DEFAULT_MAX_FRAMES = 300 * FPS;   /* アリーナに時間切れは無い。ここは暴走を止めるためだけの上限。*/
 
   /* 属性は3すくみではなく5すくみ:
    *   灼熱 → 風圧 → 鉄甲 → 電撃 → 水冷 → 灼熱
@@ -1116,6 +1116,7 @@ window.Engine = (function () {
     });
 
     var winner = null;
+    var deathSeq = 0;
 
     while (frame <= maxFrames) {
       state.A.fullBurst = frame <= state.A.fullBurstUntil;
@@ -1504,6 +1505,9 @@ window.Engine = (function () {
             } else {
               u.alive = false;
               u.deathFrame = frame;
+              /* 同じフレームで両チームが全滅したとき、後まで生きていた側を勝ちにする。
+               * アリーナに引き分けは無い。 */
+              u.deathOrder = ++deathSeq;
               var killer = u.lastHitBy;
               events.push({
                 frame: frame, kind: 'death', side: u.side, unit: u.name, pos: u.pos,
@@ -1537,15 +1541,25 @@ window.Engine = (function () {
 
       var aliveA = alive(A).length, aliveB = alive(B).length;
       if (!aliveA || !aliveB) {
-        winner = !aliveA && !aliveB ? 'draw' : (aliveA ? 'A' : 'B');
+        if (!aliveA && !aliveB) {
+          /* 同時全滅。最後に倒れたのが遅いほうが勝ち（= 長く生き残った）。 */
+          var lastA = 0, lastB = 0;
+          A.forEach(function (u) { lastA = Math.max(lastA, u.deathOrder || 0); });
+          B.forEach(function (u) { lastB = Math.max(lastB, u.deathOrder || 0); });
+          winner = lastA === lastB ? 'draw' : (lastA < lastB ? 'B' : 'A');
+        } else {
+          winner = aliveA ? 'A' : 'B';
+        }
         break;
       }
       frame += 1;
     }
 
     if (!winner) {
+      /* 時間切れは残りHPの多い側の勝ち。僅差でも必ず決着をつける
+       * （引き分けを残すと、勝率が「決まらない試合」で薄まる）。 */
       var ra = hpRatio(A), rb = hpRatio(B);
-      winner = Math.abs(ra - rb) < 0.02 ? 'draw' : (ra > rb ? 'A' : 'B');
+      winner = ra >= rb ? 'A' : 'B';
       events.push({ frame: frame, kind: 'timeout' });
     }
 

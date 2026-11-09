@@ -368,13 +368,8 @@
       plate.appendChild(top);
 
       var clsTag = { '火力型': '火力', '防御型': '防御', '支援型': '支援' }[c.classType] || c.classType;
-      var beats = ELEMENT_BEATS[c.element];
       var line = el('div', 'sub');
       line.appendChild(el('span', 'tagcls ' + c.classType.replace('型', ''), clsTag));
-      var advSpan = el('span', 'tadev', '→' + (beats || '—'));
-      advSpan.style.color = ELEMENT_COLOR[beats] || '#888';
-      advSpan.title = c.element + ' は ' + (beats || '—') + ' に有利';
-      line.appendChild(advSpan);
       var cpv = cpOfChar(c, store.editSide);
       line.appendChild(el('span', 'tacp',
         cpv > 0 ? Math.round(cpv / 100) / 10 + 'k' : '—'));
