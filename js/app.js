@@ -1708,7 +1708,8 @@
           if (cfg) e.cfg = cfg;
         });
       });
-      editing = null;
+      /* 編集中のシートは中身が古くなるので閉じる */
+      if (editing) { editing = null; $('#unitSheet').hidden = true; }
       cpCache = {};
       renderAll();
       window.Parties && renderPartySelects();
