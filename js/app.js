@@ -1175,20 +1175,6 @@
     plate: '#070a10'
   };
 
-  /* 遮蔽物の残り。hpSeries は [フレーム, HP, 遮蔽物] の3つ組。 */
-  function coverAt(unit, frame) {
-    var s = unit.hpSeries || [[0, unit.hpMax, unit.coverMax || 0]];
-    if (frame <= s[0][0]) return s[0][2] || 0;
-    for (var i = 1; i < s.length; i++) {
-      if (s[i][0] >= frame) {
-        var a = s[i - 1], b = s[i];
-        var t = (frame - a[0]) / Math.max(1, b[0] - a[0]);
-        return (a[2] || 0) + ((b[2] || 0) - (a[2] || 0)) * t;
-      }
-    }
-    return s[s.length - 1][2] || 0;
-  }
-
   function drawTimeline() {
     if (!canvas) return;
     var w = canvas.width / dpr, h = canvas.height / dpr;

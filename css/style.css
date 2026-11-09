@@ -396,9 +396,9 @@ button,select,input{font-family:inherit;font-size:inherit;color:inherit}
   overflow:hidden;
 }
 .verdict .vl{
-  flex:none;min-width:104px;
+  flex:none;min-width:124px;
   font-family:var(--font-disp);font-stretch:75%;
-  font-size:36px;font-weight:700;line-height:.9;letter-spacing:.01em;
+  font-size:44px;font-weight:700;line-height:.86;letter-spacing:.01em;
 }
 .vstats{display:flex;align-items:center;gap:20px;flex:1;min-width:0;flex-wrap:wrap}
 .vf{display:flex;flex-direction:column;gap:2px;white-space:nowrap}
@@ -804,7 +804,7 @@ html,body{max-width:100%;overflow-x:hidden}
   .roster{max-height:58vh}
   .matchbar{padding:0 14px 10px}
   .verdict{padding:10px 16px 14px;gap:12px}
-  .verdict .vl{font-size:30px;min-width:84px}
+  .verdict .vl{font-size:32px;min-width:90px}
   .vstats{gap:14px}
   .vf .vv{font-size:15px}
   .stagebody{flex-direction:column}
