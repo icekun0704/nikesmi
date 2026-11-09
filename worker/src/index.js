@@ -224,8 +224,12 @@ async function fetchRoster(env, openid, cookieOverride) {
     if (res && res.code && res.code !== 0) lastProblem = upstreamError(res);
   }
   if (!list) {
-    const detail = lastProblem && lastProblem.message ? '（' + lastProblem.message + '）' : '';
-    throw new Error('キャラクター情報を取得できませんでした' + detail);
+    if (lastProblem && lastProblem.code === 'not_logged_in') throw lastProblem;
+    const err = new Error(
+      'この URL からはキャラクター情報を取得できませんでした。BlablaLink のプロフィール画面の URL か確認してください'
+    );
+    err.code = 'not_found';
+    throw err;
   }
 
   const codes = list.map((c) => c.name_code).filter(Boolean);
@@ -377,7 +381,8 @@ export default {
 
       return fail('not found', 404, cors);
     } catch (e) {
-      const status = e && e.code === 'not_logged_in' ? 401 : 502;
+      const status =
+        e && e.code === 'not_logged_in' ? 401 : e && e.code === 'not_found' ? 404 : 502;
       return json({ ok: false, error: (e && e.message) || String(e) }, status, cors);
     }
   }
