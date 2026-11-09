@@ -1273,13 +1273,21 @@ window.Engine = (function () {
     trials = Math.max(1, Math.min(1000, trials || 50));
     var winsA = 0, winsB = 0, draws = 0;
     var frames = [], runs = [];
+    /* 1フレーム内は A の行動を先に解決するため、そのまま回すと A 側に
+       先手の利が出る（ミラー対戦で A 42% / B 30%）。実戦データでも攻撃側の
+       勝率は 50.7% で先手の利は無いので、既定では半数を入れ替えて相殺する。 */
+    var symmetric = opts.symmetric !== false;
     for (var i = 0; i < trials; i++) {
-      var r = run(teamA, teamB, Object.assign({}, opts, { seed: 1000 + i * 7919 }));
+      var swap = symmetric && (i % 2 === 1);
+      var r = swap
+        ? run(teamB, teamA, Object.assign({}, opts, { seed: 1000 + i * 7919 }))
+        : run(teamA, teamB, Object.assign({}, opts, { seed: 1000 + i * 7919 }));
       if (r.error) return r;
       runs.push(r);
       frames.push(r.frames);
-      if (r.winner === 'A') winsA++;
-      else if (r.winner === 'B') winsB++;
+      var w = swap ? (r.winner === 'A' ? 'B' : r.winner === 'B' ? 'A' : r.winner) : r.winner;
+      if (w === 'A') winsA++;
+      else if (w === 'B') winsB++;
       else draws++;
     }
     var sorted = frames.slice().sort(function (a, b) { return a - b; });

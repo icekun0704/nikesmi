@@ -1,8 +1,15 @@
 /* Validate the engine against real Champion Arena matchups.
  *
- *   node tools/validate.js [corpus] [limit] [trials]
+ *   node tools/validate.js [corpus] [limit] [trials] [arenaMode] [rev]
  *
  * corpus: c6..c10 (default c10). Reads ../work/matchups_<corpus>.json
+ *
+ * これは勝敗予測の精度を測るものではなく、物理モデルの妥当性チェック。
+ * 実測（2026-11 / Lv400・装備・スキルLv・コレクションを揃えた状態）:
+ *   c8 50.3% (151/300) / c9 44.7% (134/300) / c10 43.3% (130/300)
+ * つまり実戦の勝敗に対してほぼ無相関。実データには装備OP・スキルLv・
+ * コレクション・宝物の差が入っていないので、ここが一致しないのは想定内。
+ * ここが 60% を超えるようになったら、逆に何かを過剰適合させている疑いを持つ。
  */
 const fs = require('fs');
 const path = require('path');
