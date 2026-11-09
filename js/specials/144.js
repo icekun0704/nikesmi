@@ -12,7 +12,7 @@
 (function () {
   (window.SPECIALS = window.SPECIALS || {})[144] = {
     /* 追加ダメージ分だけパーサ側を止め、ここで実装する */
-    suppress: { skill2: [1], burst: [1] },
+    suppress: { skill2: [0, 1], burst: [1] },
     init: function (u, E) { u.julia = { crits: 0, stacks: 0, marcato: false }; },
 
     onShot: function (u, E, frame) {
