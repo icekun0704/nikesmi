@@ -758,6 +758,15 @@ def burst_stage_trigger(text):
 
 
 def parse_trigger(text, slot, ct):
+    trig = _parse_trigger(text, slot, ct)
+    # 個別ルールが先に当たると確率が落ちるので、ここで必ず拾う
+    m = re.search(r'(' + NUM + r')%の確率で', text or '')
+    if m and 'chance' not in trig:
+        trig['chance'] = float(m.group(1))
+    return trig
+
+
+def _parse_trigger(text, slot, ct):
     """Header text -> trigger descriptor."""
     t = text.strip()
     if not t:
@@ -961,6 +970,11 @@ def parse_skill(infos, slot, ct, treasure):
         conds = parse_condition(hdr)
         if conds:
             trigger.setdefault('conditions', []).extend(conds)
+
+        # 確率はヘッダ全体に書かれていることがある
+        mc = re.search(r'(' + NUM + r')%の確率で', hdr or '')
+        if mc and 'chance' not in trigger:
+            trigger['chance'] = float(mc.group(1))
 
         # バーストスキルの効果は、バーストした時にだけ発動する。
         # 「常時」になっていると、バーストしていない間も効いてしまう。

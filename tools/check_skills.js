@@ -67,6 +67,12 @@ Object.keys(DB).forEach(function (key) {
         });
       });
 
+      /* 4c-1. 確率が書かれているのに chance が無い＝毎回発動してしまう */
+      if (/の確率/.test(b.raw || '') && t.chance == null &&
+          t.kind !== 'always' && t.kind !== 'unknown') {
+        report('missing-chance', key + ' ' + slot + '#' + i + ' ' + b.raw);
+      }
+
       /* 4c-2. 常時発動でダメージを持つブロックは事故のもと */
       if (t.kind === 'always' && (b.effects || []).some(function (e) { return e.op === 'damage'; })) {
         report('always-damage', key + ' ' + slot + '#' + i + ' ' + b.raw);
