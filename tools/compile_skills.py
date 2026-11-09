@@ -384,7 +384,14 @@ def _parse_effect(text, treasure):
         m = re.search(NUM + r'%', line)
         return {'op': 'coverStat', 'value': float(m.group(1)) if m else None, 'raw': line}
     if '使用武器変更' in line:
-        return {'op': 'weaponChange', 'raw': line}
+        mv = re.search(r'ダメージ[：:]\s*最終攻撃力の?' + NUM + r'%?の?ダメージ', line)
+        md = re.search(r'(?:持続時間[：:]|：)' + NUM + r'秒', line)
+        out = {'op': 'weaponChange', 'raw': line}
+        if mv:
+            out['value'] = float(mv.group(1))
+        if md:
+            out['duration'] = float(md.group(1))
+        return out
     if 'スキルN強制使用' in line or '強制使用' in line:
         return {'op': 'forceSkill', 'raw': line}
 

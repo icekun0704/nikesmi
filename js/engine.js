@@ -664,6 +664,16 @@ window.Engine = (function () {
         }
         return;
       }
+      case 'weaponChange': {
+        /* 武器変更: 通常攻撃のダメージ倍率が変わる（値が読めたときだけ） */
+        if (effect.value == null) return;
+        var wdur = effect.duration == null ? 10 : effect.duration;
+        for (var wc = 0; wc < targets.length; wc++) {
+          targets[wc].weaponDmgOverride = effect.value;
+          targets[wc].weaponDmgUntil = frame + Math.round(wdur * FPS);
+        }
+        return;
+      }
       case 'decoy': {
         /* 分身。単体攻撃を受け止める、別枠のHPバーとして扱う。 */
         for (var dk = 0; dk < targets.length; dk++) {
@@ -1281,7 +1291,9 @@ window.Engine = (function () {
           u._lastTarget = primary;
           var hitSet = [];
           if (primary) {
-            var weaponMult = (u.char.stats && u.char.stats.weaponDamage) || 10;
+            var weaponMult = (u.weaponDmgOverride != null && frame <= u.weaponDmgUntil)
+              ? u.weaponDmgOverride
+              : ((u.char.stats && u.char.stats.weaponDamage) || 10);
             var chargeMult = (u.weapon === 'RL' || u.weapon === 'SR')
               ? ((u.char.stats && u.char.stats.maxCharge) || 250) / 100 : null;
 
