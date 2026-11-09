@@ -550,6 +550,19 @@ window.Engine = (function () {
         }
         return;
       }
+      case 'fullBurstExtend':
+      case 'fullBurstReduce': {
+        /* フルバースト時間の増減。味方全体に配られるので、実際に効くのは
+         * チームで1回だけ。ここでは各ユニットに値を置き、発動時に最大値を採る。 */
+        var secs = Number(effect.value) || 0;
+        var delta = effect.op === 'fullBurstExtend' ? secs : -secs;
+        for (var fi = 0; fi < targets.length; fi++) {
+          if (!targets[fi].fbBonusFrames || Math.abs(delta) > Math.abs(targets[fi].fbBonusFrames)) {
+            targets[fi].fbBonusFrames = Math.round(delta * FPS);
+          }
+        }
+        return;
+      }
       case 'normalIgnoreDef': {
         var ndur = effect.duration == null ? 10 : effect.duration;
         for (var ni = 0; ni < targets.length; ni++) {
@@ -929,7 +942,12 @@ window.Engine = (function () {
             if (m !== bu && m.alive) runTriggered(m, team, enemies, frame, ctx, 'allyBurst');
           });
           if (step.stage === 'B3') {
-            st.fullBurstUntil = frame + FB_FRAMES;
+            var fbAdj = 0;
+            team.forEach(function (m) {
+              if (m.fbBonusFrames && Math.abs(m.fbBonusFrames) > Math.abs(fbAdj)) fbAdj = m.fbBonusFrames;
+            });
+            var fbLen = Math.max(FPS, FB_FRAMES + fbAdj);
+            st.fullBurstUntil = frame + fbLen;
             st.fullBurst = true;
             team.forEach(function (m) {
               runEventSkills(m, team, enemies, frame, ctx, 'fullBurst');

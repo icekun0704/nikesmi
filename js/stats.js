@@ -154,7 +154,7 @@ window.Stats = (function () {
     var d = data();
     cfg = Object.assign(defaults(char), cfg || {});
     var cls = CLASS_KEY_CN[char.classType] || '火力型';
-    var table = d.classes[cls];
+    var table = d.classes[cls] || d.classes['火力'];
     var li = levelIndex(cfg.level);
 
     var weapon = char.weapon || 'AR';
