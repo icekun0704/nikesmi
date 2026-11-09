@@ -1,7 +1,7 @@
 /* 画像の置き場所.
  *
- * 既定ではこのフォルダの assets/portraits/ を見ます。
- * 画像を別の場所（CDN・R2 など）に置く場合は、次のどちらかで切り替えられます。
+ * 既定では Cloudflare の配信先から読みます（リポジトリには画像を置きません）。
+ * 別の場所に切り替えたいときは、次のどちらか。
  *
  *   1. URL に一度だけ付ける:  .../nikesmi/?img=https://example.com/portraits/
  *      （次回からも同じ場所を使います。ブラウザに記憶されます）
@@ -20,7 +20,7 @@
   var saved = null;
   try { saved = localStorage.getItem(KEY); } catch (e) { /* ignore */ }
 
-  window.PORTRAIT_BASE = window.PORTRAIT_BASE || fromQuery || saved || 'assets/portraits/';
+  window.PORTRAIT_BASE = window.PORTRAIT_BASE || fromQuery || saved || 'https://nikkeimage.icekun.workers.dev/';
 })();
 
 /* 遮蔽物のHP（ニケの基礎HPに対する比率）.

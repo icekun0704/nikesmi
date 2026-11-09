@@ -469,25 +469,6 @@ window.SyncUI = (function () {
       '</div>',
       '<p id="syncStatus" class="syncstatus"></p>',
 
-      '<details class="syncadv" id="syncAdv">',
-      '<summary>同期サーバー</summary>',
-      '<p>キャラクター情報は BlablaLink にログインしていないと取得できないため、' +
-      '中継サーバーを1つ用意します。URL を一度入れておけば、次回からは不要です。</p>',
-      '<div class="syncrow">',
-      '<input id="syncProxy" type="url" spellcheck="false" autocomplete="off" ' +
-      'placeholder="https://nikesmi-sync.xxxx.workers.dev">',
-      '<button class="syncbtn ghost" id="syncProxySave">保存</button>',
-      '</div>',
-      '<p class="synchint">作り方は <code>worker/README.md</code> にあります。</p>',
-      '<p class="synchint">中継サーバーに Cookie を置いていない場合は、' +
-      'このブラウザの BlablaLink の Cookie を使えます（保存先はこのブラウザだけ）。</p>',
-      '<div class="syncrow">',
-      '<input id="syncCookie" type="password" spellcheck="false" autocomplete="off" ' +
-      'placeholder="BlablaLink の Cookie">',
-      '<button class="syncbtn ghost" id="syncCookieSave">保存</button>',
-      '</div>',
-      '</details>',
-
       '<details class="syncadv">',
       '<summary>うまくいかないとき</summary>',
       '<p>BlablaLink を開いてログインした状態で、下のブックマークを押すと取り込めます。' +
@@ -500,29 +481,10 @@ window.SyncUI = (function () {
     ].join('');
 
     var urlInput = document.querySelector('#syncUrl');
-    var proxyInput = document.querySelector('#syncProxy');
-    var adv = document.querySelector('#syncAdv');
-
-    proxyInput.value = window.SyncFetch.proxyBase();
-    if (!configured) adv.open = true;
 
     document.querySelector('#syncGo').onclick = function () { run(urlInput.value); };
     urlInput.onkeydown = function (e) {
       if (e.key === 'Enter') run(urlInput.value);
-    };
-
-    var cookieInput = document.querySelector('#syncCookie');
-    cookieInput.value = window.SyncFetch.cookie();
-    document.querySelector('#syncCookieSave').onclick = function () {
-      var saved = window.SyncFetch.setCookie(cookieInput.value);
-      cookieInput.value = saved;
-      status(saved ? 'Cookie を保存しました' : 'Cookie を消しました', saved ? 'ok' : 'warn');
-    };
-
-    document.querySelector('#syncProxySave').onclick = function () {
-      var saved = window.setSyncProxy(proxyInput.value);
-      proxyInput.value = saved;
-      status(saved ? '保存しました' : '解除しました', saved ? '' : 'warn');
     };
 
     document.querySelector('#bmk').href = window.Sync.bookmarkletHref;
@@ -551,8 +513,8 @@ window.SyncUI = (function () {
         if (!h) return;
         if (h.has_cookie === false) {
           status('URL からの読み込みは準備中です。下の「うまくいかないとき」から取り込めます', 'warn');
-          var advs = document.querySelectorAll('.syncadv');
-          if (advs[1]) advs[1].open = true;
+          var advs = document.querySelector('.syncadv');
+          if (advs) advs.open = true;
         }
       });
     }
@@ -576,7 +538,7 @@ window.SyncUI = (function () {
       var msg = (e && e.message) || '';
       if (/ログイン/.test(msg)) {
         status('読み込めませんでした。BlablaLink にログインした状態で、下の「うまくいかないとき」から取り込んでください', 'warn');
-        document.querySelectorAll('.syncadv')[1].open = true;
+        document.querySelector('.syncadv').open = true;
       } else if (/URL/.test(msg)) {
         status('URL を読み取れませんでした。BlablaLink のプロフィール画面の URL を貼ってください', 'warn');
       } else {

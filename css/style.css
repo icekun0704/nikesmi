@@ -8,8 +8,8 @@
   --line:      rgba(255,255,255,.08);
   --line-2:    rgba(255,255,255,.05);
   --fg:        #f2f5fa;
-  --fg-2:      #a9b2c6;
-  --fg-3:      #6b7488;
+  --fg-2:      #bcc4d4;
+  --fg-3:      #8e97ab;
   --self:      #35e0b4;
   --foe:       #ff9a4d;
   --violet:    #7c5cff;
@@ -39,7 +39,7 @@ body{
     var(--bg);
   color:var(--fg);
   font-family:var(--font-jp);
-  font-size:13px;line-height:1.5;
+  font-size:13.5px;line-height:1.55;
   -webkit-font-smoothing:antialiased;
   user-select:none;
 }
@@ -444,3 +444,49 @@ button,select,input{font-family:inherit;font-size:inherit;color:inherit}
 .syncbtn:disabled{opacity:.5;cursor:default}
 .syncbtn.ghost{background:var(--bg-2);border-color:var(--line);color:var(--fg-2);box-shadow:none;font-weight:600}
 .syncbtn.ghost:hover{color:#fff;border-color:rgba(255,255,255,.28)}
+
+/* --------------------------------------------------------------- drag */
+.card, .slot { touch-action: pan-y; }
+body.dragging, body.dragging * { cursor: grabbing !important; user-select: none !important; -webkit-user-select: none !important; }
+.dragghost{
+  position: fixed; left: 0; top: 0; width: 60px; height: 60px; z-index: 999;
+  border-radius: 12px; pointer-events: none; opacity: .9;
+  background: linear-gradient(135deg, var(--violet), #5b8bff);
+  color: #fff; font-size: 11px; font-weight: 700; line-height: 1.15;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 4px; box-shadow: 0 12px 28px -8px rgba(0,0,0,.7);
+  transform: translate(-9999px,-9999px);
+}
+.slot.dragover{ border-color: var(--violet); box-shadow: 0 0 0 2px rgba(124,92,255,.55) inset; }
+
+/* ------------------------------------------------------------ mobile perf */
+/* 223枚のカードを一度に描かない。画面外はレイアウトだけ確保して描画を省く。 */
+.card{content-visibility:auto;contain-intrinsic-size:auto 132px}
+html,body{max-width:100%;overflow-x:hidden}
+@supports (height:100dvh){body{height:100dvh}}
+
+@media (max-width:900px){
+  /* iOS は backdrop-filter が重いので切る */
+  .topbar{backdrop-filter:none;background:rgba(8,9,13,.96)}
+  .modal{backdrop-filter:none}
+  .card,.slot{box-shadow:none}
+  body{font-size:13.5px}
+  .transport{position:sticky;bottom:0;z-index:6;background:rgba(8,9,13,.97)}
+  .verdict{font-size:20px;padding:10px 16px}
+  .stagehead{gap:6px;flex-wrap:wrap}
+  .rosterpane{padding-bottom:8px}
+}
+@media (max-width:640px){
+  .slots{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .slot{min-height:84px}
+  .boardhead{flex-wrap:wrap;gap:6px}
+  .rosterbar{gap:6px;padding:8px 12px}
+  .roster{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));padding:10px 12px 20px}
+  .card .nm{font-size:11px}
+  .topbar{padding:8px 12px;gap:8px}
+  .brand-sub{display:none}
+  .modehint{display:none}
+  .transport{padding:0 10px;gap:6px}
+  .readout{font-size:11px}
+  .canvaswrap{height:104px}
+}

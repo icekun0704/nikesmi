@@ -33,6 +33,15 @@
   /* ------------------------------------------------------------------ state */
   var MAX_LEVEL = 1400;
 
+  /* スマホ・非力な端末では計算回数を減らす。結果が重いと操作が引っかかるため。 */
+  var LOW_POWER = (function () {
+    try {
+      if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) return true;
+      if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) return true;
+    } catch (e) { /* ignore */ }
+    return false;
+  })();
+
   var store = {
     mode: 'champion',
     teams: { A: [null, null, null, null, null], B: [null, null, null, null, null] },
@@ -69,6 +78,85 @@
         teams: store.teams, mode: store.mode, teamLevel: store.teamLevel
       }));
     } catch (e) { /* quota */ }
+  }
+
+  /* ------------------------------------------------------------- drag */
+  /* マウスでもタッチでも同じように動く、ポインタベースのドラッグ。 */
+  var dragState = null;
+
+  function placeGhost(x, y) {
+    if (!dragState || !dragState.ghost) return;
+    dragState.ghost.style.transform = 'translate(' + (x - 30) + 'px,' + (y - 30) + 'px)';
+  }
+  function slotUnder(x, y) {
+    var elAt = document.elementFromPoint(x, y);
+    return elAt && elAt.closest ? elAt.closest('.slot') : null;
+  }
+  function startDrag(payload, ev, label) {
+    var g = document.createElement('div');
+    g.className = 'dragghost';
+    g.textContent = label || '';
+    document.body.appendChild(g);
+    dragState = { payload: payload, ghost: g, slot: null };
+    document.body.classList.add('dragging');
+    placeGhost(ev.clientX, ev.clientY);
+  }
+  function updateDrag(ev) {
+    if (!dragState) return;
+    placeGhost(ev.clientX, ev.clientY);
+    var s = slotUnder(ev.clientX, ev.clientY);
+    if (s !== dragState.slot) {
+      if (dragState.slot) dragState.slot.classList.remove('dragover');
+      dragState.slot = s;
+      if (s) s.classList.add('dragover');
+    }
+  }
+  function finishDrag(dropped) {
+    if (!dragState) return;
+    var s = dragState.slot;
+    var payload = dragState.payload;
+    if (dragState.ghost && dragState.ghost.parentNode) dragState.ghost.parentNode.removeChild(dragState.ghost);
+    if (s) s.classList.remove('dragover');
+    document.body.classList.remove('dragging');
+    dragState = null;
+    if (!dropped || !s) return;
+    var side = s.dataset.side;
+    var index = parseInt(s.dataset.index, 10);
+    if (!side || !(index >= 0)) return;
+    if (payload.type === 'char') placeCharAt(side, index, payload.id);
+    else if (payload.type === 'slot') moveSlot(payload.side, payload.index, side, index);
+  }
+
+  function armDrag(el, payload, label, onClick) {
+    el.addEventListener('pointerdown', function (ev) {
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      if (ev.target && ev.target.closest && ev.target.closest('.gear')) return;
+      var sx = ev.clientX, sy = ev.clientY, started = false;
+      function move(e) {
+        if (!started) {
+          if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 8) return;
+          started = true;
+          el.dataset.dragging = '1';
+          if (el._cancelPress) el._cancelPress();
+          startDrag(payload, e, label);
+        }
+        if (e.cancelable) e.preventDefault();
+        updateDrag(e);
+      }
+      function up() {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', up);
+        if (started) finishDrag(true);
+      }
+      window.addEventListener('pointermove', move, { passive: false });
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', up);
+    });
+    el.addEventListener('click', function (ev) {
+      if (el.dataset.dragging) { delete el.dataset.dragging; ev.preventDefault(); ev.stopPropagation(); return; }
+      if (onClick) onClick(ev);
+    });
   }
 
   /* ---------------------------------------------------------------- helpers */
@@ -246,16 +334,14 @@
       ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (evt) {
         card.addEventListener(evt, function () { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
       });
-      card.addEventListener('click', function (ev) {
-        if (longPressed) { longPressed = false; ev.preventDefault(); return; }
+      card._cancelPress = function () {
+        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+        longPressed = false;
+      };
+      armDrag(card, { type: 'char', id: c.id }, c.name, function () {
+        if (longPressed) { longPressed = false; return; }
         placeChar(c.id);
       });
-      card.addEventListener('dragstart', function (ev) {
-        ev.dataTransfer.setData('text/plain', String(c.id));
-        ev.dataTransfer.effectAllowed = 'copy';
-        card.style.opacity = '.45';
-      });
-      card.addEventListener('dragend', function () { card.style.opacity = ''; });
 
       frag.appendChild(card);
     });
@@ -276,12 +362,32 @@
       lvWrap.appendChild(el('span', null, 'Lv'));
       var inp = document.createElement('input');
       inp.type = 'number'; inp.min = 1; inp.max = MAX_LEVEL;
+      inp.id = 'lv' + side;
       inp.value = store.teamLevel[side] || 400;
-      inp.addEventListener('change', function () {
+      var lvTimer = null;
+      var applyLv = function () {
         var v = Math.max(1, Math.min(MAX_LEVEL, parseInt(inp.value, 10) || 400));
-        inp.value = v;
         store.teamLevel[side] = v;
-        persist(); renderAll(); scheduleSim();
+        // このチームの全員をそのレベルにする（シンクロデバイスの考え方）
+        store.teams[side].forEach(function (e) {
+          if (!e) return;
+          e.cfg = e.cfg || {};
+          e.cfg.stats = e.cfg.stats || {};
+          e.cfg.stats.level = v;
+        });
+        persist();
+        renderBoard('A'); renderBoard('B');
+        scheduleSim();
+        var again = document.querySelector('#lv' + side);
+        if (again) { again.focus(); if (again.setSelectionRange) again.setSelectionRange(again.value.length, again.value.length); }
+      };
+      inp.addEventListener('input', function () {
+        if (lvTimer) clearTimeout(lvTimer);
+        lvTimer = setTimeout(function () { lvTimer = null; applyLv(); }, 250);
+      });
+      inp.addEventListener('change', function () {
+        if (lvTimer) { clearTimeout(lvTimer); lvTimer = null; }
+        applyLv();
       });
       lvWrap.appendChild(inp);
       meta.appendChild(lvWrap);
@@ -361,36 +467,18 @@
       }
     }
 
-    slot.addEventListener('click', function (ev) {
-      if (ev.target.closest('.gear')) return;
-      store.selected = { side: side, index: index };
-      store.editSide = side;
-      syncEditSeg();
-      renderBoard('A'); renderBoard('B');
-    });
-    if (entry) {
-      slot.draggable = true;
-      slot.addEventListener('dragstart', function (ev) {
-        ev.dataTransfer.setData('text/plain', 'slot:' + side + ':' + index);
-        ev.dataTransfer.effectAllowed = 'move';
-        slot.style.opacity = '.45';
-      });
-      slot.addEventListener('dragend', function () { slot.style.opacity = ''; });
-    }
-    slot.addEventListener('dragover', function (ev) { ev.preventDefault(); slot.classList.add('dragover'); });
-    slot.addEventListener('dragleave', function () { slot.classList.remove('dragover'); });
-    slot.addEventListener('drop', function (ev) {
-      ev.preventDefault();
-      slot.classList.remove('dragover');
-      var data = ev.dataTransfer.getData('text/plain') || '';
-      if (data.indexOf('slot:') === 0) {
-        var parts = data.split(':');
-        moveSlot(parts[1], parseInt(parts[2], 10), side, index);
-        return;
+    armDrag(
+      slot,
+      entry ? { type: 'slot', side: side, index: index } : { type: 'empty' },
+      entry ? BY_ID[entry.charId] && BY_ID[entry.charId].name : '',
+      function (ev) {
+        if (ev.target.closest('.gear')) return;
+        store.selected = { side: side, index: index };
+        store.editSide = side;
+        syncEditSeg();
+        renderBoard('A'); renderBoard('B');
       }
-      var id = parseInt(data, 10);
-      if (id) placeCharAt(side, index, id);
-    });
+    );
 
     return slot;
   }
@@ -511,13 +599,25 @@
     var inp = document.createElement('input');
     inp.type = 'number'; inp.value = value;
     inp.min = min; inp.max = max; if (step) inp.step = step;
-    inp.addEventListener('change', function () {
+    var apply = function () {
       var v = parseFloat(inp.value);
       if (!isFinite(v)) v = value;
       v = Math.max(min, Math.min(max, v));
-      inp.value = v;
       onChange(v);
       onEdited();
+    };
+    // 数字の矢印を押した時は change が来ないことがあるので input でも拾う
+    var timer = null;
+    inp.addEventListener('input', function () {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () { timer = null; apply(); }, 250);
+    });
+    inp.addEventListener('change', function () {
+      if (timer) { clearTimeout(timer); timer = null; }
+      var v = parseFloat(inp.value);
+      if (!isFinite(v)) v = value;
+      inp.value = Math.max(min, Math.min(max, v));
+      apply();
     });
     row.appendChild(inp);
     return row;
@@ -693,7 +793,7 @@
 
   function scheduleSim() {
     if (simTimer) clearTimeout(simTimer);
-    simTimer = setTimeout(runSim, 140);
+    simTimer = setTimeout(runSim, LOW_POWER ? 260 : 140);
   }
 
   function teamsToChars(side) {
@@ -734,14 +834,15 @@
     }
 
     var mode = MODE[store.mode];
-    var opts = { units: unitOptions() };
+    // チャンピオンアリーナは両者とも同じ隊列なので、参照実装の 'c' モードを使う
+    var opts = { units: unitOptions(), arenaMode: store.mode === 'champion' ? 'c' : 'normal' };
     if (mode.cpPenalty) {
       opts.cpPenalty = { A: totalCp(store.teams.A), B: totalCp(store.teams.B) };
     }
 
     var r;
     try {
-      r = window.Engine.runMany(A, B, opts, mode.trials);
+      r = window.Engine.runMany(A, B, opts, LOW_POWER ? Math.min(24, mode.trials) : mode.trials);
     } catch (e) {
       console.error(e);
       store.result = null; store.sample = null;
@@ -840,7 +941,7 @@
   function resizeCanvas() {
     if (!canvas) return;
     var box = canvas.parentElement.getBoundingClientRect();
-    dpr = window.devicePixelRatio || 1;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.max(1, Math.round(box.width * dpr));
     canvas.height = Math.max(1, Math.round(box.height * dpr));
   }
