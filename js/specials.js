@@ -11660,6 +11660,8 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[44] = {
+  /* 遮蔽物の復活はここで実装している */
+  suppress: { burst: [0] },
     init: function (u, E) {
       st(u);
     },
@@ -11763,6 +11765,8 @@ window.SPECIALS = window.SPECIALS || {};
  *   - burst の「バースト再突入1段階」（バースト進行を触る API が無い）
  */
 (window.SPECIALS = window.SPECIALS || {})[45] = {
+  /* 遮蔽物のHP増減はここで実装している */
+  suppress: { skill2: [0, 1] },
   init: function (u, E) {
     u.tia = {
       coverBuff: null,     /* { amount, until } */

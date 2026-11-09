@@ -94,6 +94,8 @@ def main():
     }
     for name, bad, unk in missing_chars:
         if name in ARENA_NA:
+            out.append('  %-24s 未解釈 %2d / 不明 %2d  ← アリーナ非該当: %s'
+                       % (name, bad, unk, ARENA_NA[name]))
             continue
         out.append('  %-24s 未解釈 %2d / 不明 %2d' % (name, bad, unk))
     io.open(os.path.join(APP, '_report.txt'), 'w', encoding='utf-8').write(chr(10).join(out))

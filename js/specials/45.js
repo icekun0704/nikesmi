@@ -13,6 +13,8 @@
  *   - burst の「バースト再突入1段階」（バースト進行を触る API が無い）
  */
 (window.SPECIALS = window.SPECIALS || {})[45] = {
+  /* 遮蔽物のHP増減はここで実装している */
+  suppress: { skill2: [0, 1] },
   init: function (u, E) {
     u.tia = {
       coverBuff: null,     /* { amount, until } */

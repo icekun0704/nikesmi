@@ -79,6 +79,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[44] = {
+  /* 遮蔽物の復活はここで実装している */
+  suppress: { burst: [0] },
     init: function (u, E) {
       st(u);
     },
