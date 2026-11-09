@@ -8,8 +8,11 @@
  *
  * 2026-11-10 追記: 実戦ログの id は js/data.js の id と**別体系**で、以前は
  * まったく別のキャラ同士を戦わせていた（43%＝ほぼ無相関の原因）。名前で
- * 突き合わせるよう直したあとの実測（各300件・チャンピオンモード・3試行）:
- *   c6 55.7% / c7 52.7% / c8 56.3% / c9 58.7% / c10 56.7%
+ * 突き合わせるよう直したあとの実測（各300件・チャンピオンモード・1試行）:
+ *   c6 56.0% / c7 52.7% / c8 55.3% / c9 58.0% / c10 57.7%
+ * コレクションの実値も反映している（'sr_15' は確定、'sr_0_14' は 0〜14 の
+ * どれかで不明。不明分を 0/7/15 のどれに置いても精度は 57.7〜58.0% で
+ * ほぼ動かないので、既定は中間の 7）。
  * 装備OP・スキルLv・コレクションが実データに無いことを考えれば、この水準が妥当。
  * 65% を超えたら過剰適合を疑う。
  */
@@ -76,8 +79,36 @@ function build(team, collections) {
   });
 }
 
-function cfgFor(collections) {
+/* コレクションの実値。'sr_15' は確定、'sr_0_14' は 0〜14 のどれかで実値不明。
+ * 不明分をどう置くかで結果が変わるので、--coll で切り替えて感度を見られるようにする。 */
+const COLL_UNKNOWN = (function () {
+  const a = process.argv.find(x => x.indexOf('--coll=') === 0);
+  const v = a ? a.split('=')[1] : 'mid';
+  if (v === 'lo') return 0;
+  if (v === 'hi') return 15;
+  return 7;
+})();
+
+function collectibleFrom(col) {
+  if (!col) return null;
+  if (col.indexOf('treasure') === 0) return null;   // 宝物形態は SR15 固定
+  if (col === 'none') return { rarity: 'R', level: 0 };
+  const m = /^(sr|r)_(15|0_14)$/.exec(col);
+  if (!m) return null;
+  return {
+    rarity: m[1] === 'sr' ? 'SR' : 'R',
+    level: m[2] === '15' ? 15 : COLL_UNKNOWN
+  };
+}
+
+function unitOptions(team, collections, side) {
   const units = {};
+  team.forEach((c, i) => {
+    if (!c) return;
+    const coll = collectibleFrom((collections || [])[i]);
+    if (!coll) return;
+    units[side + '|' + i] = { stats: { collectible: coll } };
+  });
   return units;
 }
 
@@ -94,7 +125,13 @@ for (const m of cases.slice(0, limit)) {
     continue;
   }
 
-  const r = window.Engine.runMany(A, B, { arenaMode: arenaMode }, trials);
+  const opts = {
+    arenaMode: arenaMode,
+    units: Object.assign(
+      unitOptions(A, m.attacker_collections, 'A'),
+      unitOptions(B, reverseB ? m.defender_collections.slice().reverse() : m.defender_collections, 'B'))
+  };
+  const r = window.Engine.runMany(A, B, opts, trials);
   if (r.error) {
     skipped++;
     if (skipped < 4) console.log('skip:', r.error);
