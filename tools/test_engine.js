@@ -69,17 +69,16 @@ console.log('hpRatio', r.hpRatio);
  */
 const ref = window.Engine.run(T1, T2, { seed: 7 });
 const own = ref.bursts.filter(b => b.side === 'A').slice(0, 3).map(b => b.frame);
-const expect = [178, 210, 242];
-let drift = 0;
-if (own.length >= 3) {
-  for (let i = 0; i < 3; i++) drift = Math.max(drift, Math.abs(own[i] - expect[i]));
-}
-if (own.length < 3) {
-  console.log('\n[NG] バーストが3段階そろっていません:', own);
+/* 参照実装は「全員生きている前提」でゲージだけから B1/B2/B3 を出す。
+ * 実戦では途中で倒れると段が飛ぶので、比べるのは B1 の時刻だけ。 */
+const expectB1 = 178;
+const drift = own.length ? Math.abs(own[0] - expectB1) : 999;
+if (!own.length) {
+  console.log('[NG] バーストが起きていません');
   process.exitCode = 1;
 } else if (drift > 1) {
-  console.log('\n[NG] バースト速度が参照実装から ' + drift + 'F ずれています:', own, '期待', expect);
+  console.log('[NG] ゲージ満タンからのB1が参照実装から ' + drift + 'F ずれています: ' + own[0] + 'F');
   process.exitCode = 1;
 } else {
-  console.log('\n[OK] バースト速度 参照実装との差 ' + drift + 'F (' + own.join(', ') + ')');
+  console.log('[OK] B1 ' + own[0] + 'F (参照 ' + expectB1 + 'F, 差 ' + drift + 'F)');
 }

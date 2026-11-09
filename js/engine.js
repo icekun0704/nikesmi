@@ -1218,6 +1218,12 @@ window.Engine = (function () {
 
           hitSet.forEach(function (t) { t.counters.hitsTaken += 1; });
           hitSet.forEach(function (t) {
+            if (!t.alive || t.hp <= 0) return;
+            var tt = t.side === 'A' ? A : B;
+            var ee = t.side === 'A' ? B : A;
+            runTriggered(t, tt, ee, frame, ctx, 'hitTaken');
+          });
+          hitSet.forEach(function (t) {
             if (t.alive && t.hp > 0) runCounterSkills(t, team, enemies, frame, ctx, 'hitsTaken');
           });
         });
