@@ -686,8 +686,9 @@ window.Engine = (function () {
         if (trig.kind !== 'always' && trig.kind !== 'battleStart') continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
         if (trig.kind === 'battleStart' && frame > 0) continue;
-        // 常時パッシブはダメージを与えない（与えるものは別のトリガーを持つ）
-        if (!bs.block.effects.some(function (ef) { return ef.op !== 'damage'; })) continue;
+        // 常時パッシブはダメージを与えない。ダメージを含むブロックが
+        // 常時扱いになっているのは解釈違いなので、発動させない。
+        if (bs.block.effects.some(function (ef) { return ef.op === 'damage'; })) continue;
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
       }
     }

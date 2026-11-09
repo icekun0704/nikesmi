@@ -818,6 +818,7 @@ def parse_trigger(text, slot, ct):
         (r'^味方が倒れた時', {'kind': 'allyDeath'}),
         (r'^敵が倒れた時', {'kind': 'enemyDeath'}),
         (r'^自分が倒れた時', {'kind': 'selfDeath'}),
+        (r'^戦闘不能に至る攻撃を受けると', {'kind': 'unknown', 'text': '戦闘不能に至る攻撃を受けると'}),
         (r'^戦闘開始時', {'kind': 'battleStart'}),
         (r'^被弾した時', {'kind': 'hitTaken'}),
     ]
@@ -943,6 +944,10 @@ def parse_skill(infos, slot, ct, treasure):
         real = [e for e in effects if e and e.get('op') != 'meta']
         if not real:
             return
+        # 常時発動のままダメージを持つブロックは、条件の読み落とし。
+        # そのまま動かすと毎フレーム大ダメージになるので発動させない。
+        if trigger.get('kind') == 'always' and any(e.get('op') == 'damage' for e in real):
+            trigger = {'kind': 'unknown', 'text': hdr or '(damage)'}
         blocks.append({
             'trigger': trigger,
             'target': target,

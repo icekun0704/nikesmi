@@ -67,6 +67,11 @@ Object.keys(DB).forEach(function (key) {
         });
       });
 
+      /* 4c-2. 常時発動でダメージを持つブロックは事故のもと */
+      if (t.kind === 'always' && (b.effects || []).some(function (e) { return e.op === 'damage'; })) {
+        report('always-damage', key + ' ' + slot + '#' + i + ' ' + b.raw);
+      }
+
       /* 4d. バーストスキルの効果はバースト時だけ発動する */
       if (slot === 'burst' && (t.kind === 'always' || t.kind === 'battleStart')) {
         report('burst-slot-always', key + ' ' + slot + '#' + i + ' ' + b.raw);
