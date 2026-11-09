@@ -352,7 +352,15 @@ def _parse_effect(text, treasure):
     if 'デコイ回復' in line or 'デコイ持続回復' in line:
         return {'op': 'decoyHeal', 'raw': line}
     if line.startswith('弾丸チャージ') or '弾丸チャージ' in line:
-        return {'op': 'bulletCharge', 'raw': line}
+        mp = re.search(r'弾丸チャージ(' + NUM + r')%', line)
+        mn = re.search(r'弾丸チャージ(\d+)発', line)
+        out = {'op': 'bulletCharge', 'raw': line}
+        if mp:
+            out['value'] = float(mp.group(1))
+        elif mn:
+            out['value'] = float(mn.group(1))
+            out['unit'] = 'rounds'
+        return out
     if line.startswith('スタック可能バフ'):
         return {'op': 'stackBoost', 'raw': line}
     if line.startswith('チェーンバインド'):

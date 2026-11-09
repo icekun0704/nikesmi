@@ -626,6 +626,19 @@ window.Engine = (function () {
         }
         return;
       }
+      case 'bulletCharge': {
+        /* 装填中の弾をその場で補充する（% または 発数） */
+        for (var bc = 0; bc < targets.length; bc++) {
+          var bu = targets[bc];
+          var f = bu && bu.firing;
+          if (!f || !isFinite(f.magazine) || f.magazine <= 0) continue;
+          var amount = effect.unit === 'rounds'
+            ? (effect.value || 0)
+            : f.magazine * (effect.value || 0) / 100;
+          f.shotsInMagazine = Math.max(0, f.shotsInMagazine - amount);
+        }
+        return;
+      }
       case 'infiniteMagazine': {
         var mdur = effect.duration == null ? 10 : effect.duration;
         for (var im = 0; im < targets.length; im++) {
