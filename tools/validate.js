@@ -5,11 +5,13 @@
  * corpus: c6..c10 (default c10). Reads ../work/matchups_<corpus>.json
  *
  * これは勝敗予測の精度を測るものではなく、物理モデルの妥当性チェック。
- * 実測（2026-11 / Lv400・装備・スキルLv・コレクションを揃えた状態）:
- *   c8 50.3% (151/300) / c9 44.7% (134/300) / c10 43.3% (130/300)
- * つまり実戦の勝敗に対してほぼ無相関。実データには装備OP・スキルLv・
- * コレクション・宝物の差が入っていないので、ここが一致しないのは想定内。
- * ここが 60% を超えるようになったら、逆に何かを過剰適合させている疑いを持つ。
+ *
+ * 2026-11-10 追記: 実戦ログの id は js/data.js の id と**別体系**で、以前は
+ * まったく別のキャラ同士を戦わせていた（43%＝ほぼ無相関の原因）。名前で
+ * 突き合わせるよう直したあとの実測（各300件・チャンピオンモード・3試行）:
+ *   c6 55.7% / c7 52.7% / c8 56.3% / c9 58.7% / c10 56.7%
+ * 装備OP・スキルLv・コレクションが実データに無いことを考えれば、この水準が妥当。
+ * 65% を超えたら過剰適合を疑う。
  */
 const fs = require('fs');
 const path = require('path');
@@ -33,6 +35,52 @@ C.forEach(c => {
   if (c.treasure && byId[c.orgId]) treasureOf[byId[c.orgId].id] = c;
 });
 
+/* 実戦ログ（nikkeari）の id は js/data.js の id と**別体系**。そのまま引くと
+ * まったく別のキャラで戦わせてしまうので、名前で突き合わせる。
+ * 照合の健全性のため、武器・属性・バースト段階が一致するかも検証する。
+ * 食い違ったら engine 側（ゲーム内バンドル由来）を正とする。実測では
+ * マナの属性（nikkeari 灼熱 / ゲーム内 風圧）とリリーの段階（同 B1 / B2）が
+ * 実戦データ側の誤りだった。 */
+const NK = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'work', 'characters.json'), 'utf8'));
+const ALIAS = {
+  'ネオン：ビジョン・アイ': 'ネオン：ビジョンアイ',
+  'ラプンツェル:ピュアグレイス': 'ラプンツェル：ピュアグレイス',
+  'ギルティ：マイティーバニー': 'ギルティ：マイティバニー',
+  'クイーン（新島真）': 'クイーン（真）',
+  'アヤナミレイ(仮称)': 'レイ（仮称）',
+  '式波・アスカ・ラングレー': 'アスカ',
+  '真希波・マリ・イラストリアス': 'マリ',
+  '綾波レイ': 'レイ',
+  '井ノ上たきな': 'たきな',
+  '錦木千束': '千束',
+  '天城雪子': '雪子',
+  '葛城ミサト': 'ミサト'
+};
+const normName = s => String(s).replace(/[：:・\s　()（）]/g, '');
+const engineByName = {};
+C.forEach(c => { if (!c.treasure) engineByName[normName(c.name)] = c; });
+const nkToEngine = {};
+const mapProblems = [];
+NK.forEach(row => {
+  if (row.id === 9999 || row.name === '空枠') return;      // 空き枠
+  const target = ALIAS[row.name] || row.name;
+  const hit = engineByName[normName(target)];
+  if (!hit) { mapProblems.push('未対応 ' + row.id + ' ' + row.name); return; }
+  /* レッドフードは段階を自分で上げるので nikkeari 側が 'BA'、engine 側が 'B123'。
+   * 同じ意味なので一致扱いにする。 */
+  const burst = row.burst_phase === 'A' ? 'B123' : 'B' + row.burst_phase;
+  if (hit.weapon !== row.weapon || hit.element !== row.element || hit.burstStage !== burst) {
+    mapProblems.push('属性不一致 ' + row.name + ' → ' + hit.name +
+      ' (nikkeari ' + row.weapon + '/' + row.element + '/' + burst +
+      ' vs engine ' + hit.weapon + '/' + hit.element + '/' + hit.burstStage + ')');
+  }
+  nkToEngine[row.id] = hit;
+});
+if (mapProblems.length) {
+  console.log('名前の対応に ' + mapProblems.length + ' 件の問題:');
+  mapProblems.slice(0, 15).forEach(m => console.log('  ' + m));
+}
+
 const corpus = process.argv[2] || 'c10';
 const limit = parseInt(process.argv[3] || '600', 10);
 const arenaMode = process.argv[5] || 'normal';
@@ -55,10 +103,11 @@ for (const m of arr) {
 
 function build(team, collections) {
   return team.map((id, i) => {
-    let c = byId[id];
+    let c = nkToEngine[id];
     if (!c) return null;
     const col = (collections || [])[i] || '';
-    if (col.indexOf('treasure') >= 0 && treasureOf[id]) c = treasureOf[id];
+    const baseId = c.id;
+    if (col.indexOf('treasure') >= 0 && treasureOf[baseId]) c = treasureOf[baseId];
     return c;
   });
 }

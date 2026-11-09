@@ -44,6 +44,23 @@ const gNorm = window.Gauge.simulate(flyTeam, { side: 'defense', region: 'cn', ar
 const gChamp = window.Gauge.simulate(flyTeam, { side: 'defense', region: 'cn', arenaMode: 'c' });
 const gAtk = window.Gauge.simulate(flyTeam, { side: 'attack', region: 'cn', arenaMode: 'c' });
 show('mirror champion-mode (should be ~50/50)', T1, T2, 200);
+
+/* ミラー対戦の不変条件。アリーナに引き分けは無い（同時全滅は deathOrder で決着する）し、
+ * 同じ編成どうしなら五分に近づくはず。ここが崩れたら解決順か乱数利用を壊している。 */
+{
+  const mm = window.Engine.runMany(T1, T2, { arenaMode: 'c' }, 200);
+  const skew = Math.abs(mm.winsA - mm.winsB) / mm.trials;
+  if (mm.draws > 0) {
+    console.log('[NG] ミラー対戦で引き分けが出ています: ' + mm.draws + '/' + mm.trials);
+    process.exitCode = 1;
+  } else if (skew > 0.12) {
+    console.log('[NG] ミラーの勝率が偏っています: A ' + mm.winsA + ' / B ' + mm.winsB);
+    process.exitCode = 1;
+  } else {
+    console.log('[OK] ミラー 引き分け0 / A ' + (100 * mm.winsA / mm.trials).toFixed(1) +
+      '% B ' + (100 * mm.winsB / mm.trials).toFixed(1) + '%');
+  }
+}
 console.log(
   '[OK] アリーナモード 通常/チャンピオン B1 ' + gNorm.burst1Frame + '/' + gChamp.burst1Frame +
   'F  チャンピオン攻撃/防御 B1 ' + gAtk.burst1Frame + '/' + gChamp.burst1Frame + 'F'
