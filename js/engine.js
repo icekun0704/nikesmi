@@ -736,7 +736,7 @@ window.Engine = (function () {
   function stageMatches(trig, stage, isSelf) {
     if (trig.stage == null) return true;
     if (stage == null) return false;
-    if (isSelf != null && !!trig.ally !== !isSelf) return false;
+    if (isSelf != null && !!trig.ally === !!isSelf) return false;
     var n = typeof stage === 'string' ? Number(String(stage).replace(/^B/, '')) : Number(stage);
     return Number(trig.stage) === n;
   }
