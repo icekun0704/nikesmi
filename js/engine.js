@@ -173,8 +173,10 @@ window.Engine = (function () {
       invulnUntil: -1,
       tauntUntil: -1,
       stunUntil: -1,
+      shieldUntil: 0,
       shareGroup: null,
       lifestealPct: 0,
+      lifestealUntil: 0,
       indomitableUntil: -1,
       reviveAtHpPct: 0,
       revived: false,
@@ -594,7 +596,10 @@ window.Engine = (function () {
       case 'shield': {
         for (var s = 0; s < targets.length; s++) {
           var sv = u.hpMax * effect.value / 100;
-          targets[s].shield = Math.max(targets[s].shield, sv);
+          if (sv >= targets[s].shield) {
+            targets[s].shield = sv;
+            targets[s].shieldUntil = until;
+          }
         }
         return;
       }
@@ -662,7 +667,10 @@ window.Engine = (function () {
         group.forEach(function (g) { g.shareGroup = group; });
         return;
       }
-      case 'lifesteal': u.lifestealPct = Math.max(u.lifestealPct, effect.value); return;
+      case 'lifesteal':
+        u.lifestealPct = Math.max(u.lifestealPct, effect.value);
+        u.lifestealUntil = until;
+        return;
       case 'indomitable': u.indomitableUntil = Math.max(u.indomitableUntil, until === Infinity ? frame + 7 * FPS : until); return;
       case 'revive': u.reviveAtHpPct = Math.max(u.reviveAtHpPct, effect.value); return;
       case 'gaugeCharge': ctx.gaugeCharge(u.side, effect.value); return;
@@ -1298,6 +1306,15 @@ window.Engine = (function () {
           if (!u.alive) return;
           recalcHpMax(u);
           purgeBuffs(u);
+          if (u.shield > 0 && u.shieldUntil != null && u.shieldUntil !== Infinity && frame > u.shieldUntil) {
+            u.shield = 0;
+            u.shieldUntil = 0;
+          }
+          if (u.lifestealPct > 0 && u.lifestealUntil != null &&
+              u.lifestealUntil !== Infinity && frame > u.lifestealUntil) {
+            u.lifestealPct = 0;
+            u.lifestealUntil = 0;
+          }
           if (u.hp <= 0) {
             if (u.reviveAtHpPct > 0 && !u.revived) {
               u.revived = true;
