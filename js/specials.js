@@ -2379,6 +2379,8 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[128] = {
+  /* 毎秒回復はここで実装している */
+  suppress: { skill2: [0], burst: [0] },
     init: function (u, E) {
       cloneSkills(u);
       /* スキル2の2番目のブロック（バーストCT短縮）は自分専用なので止める */
