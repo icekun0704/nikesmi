@@ -935,6 +935,11 @@ def parse_skill(infos, slot, ct, treasure):
         conds = parse_condition(hdr)
         if conds:
             trigger.setdefault('conditions', []).extend(conds)
+
+        # バーストスキルの効果は、バーストした時にだけ発動する。
+        # 「常時」になっていると、バーストしていない間も効いてしまう。
+        if slot == 'burst' and trigger.get('kind') == 'always':
+            trigger['kind'] = 'burst'
         real = [e for e in effects if e and e.get('op') != 'meta']
         if not real:
             return

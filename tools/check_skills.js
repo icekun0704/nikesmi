@@ -67,6 +67,11 @@ Object.keys(DB).forEach(function (key) {
         });
       });
 
+      /* 4d. バーストスキルの効果はバースト時だけ発動する */
+      if (slot === 'burst' && (t.kind === 'always' || t.kind === 'battleStart')) {
+        report('burst-slot-always', key + ' ' + slot + '#' + i + ' ' + b.raw);
+      }
+
       /* 5. 回数指定だけ残って本体が常時のブロック（回数が無視される） */
       if (t.nth && t.kind === 'always') {
         report('nth-without-trigger', key + ' ' + slot + '#' + i + ' ' + b.raw);
