@@ -356,7 +356,12 @@ def _parse_effect(text, treasure):
     if line.startswith('スキル対象'):
         return {'op': 'meta', 'raw': line}
     if line.startswith('デコイ'):
-        return {'op': 'decoy', 'raw': line}
+        mv = re.search(r'最終最大HPの?' + NUM + r'%の?分身', line)
+        md = DURATION_RE.search(line)
+        return {'op': 'decoy',
+                'value': float(mv.group(1)) if mv else None,
+                'duration': float(md.group(1)) if md else None,
+                'raw': line}
     if 'デコイ回復' in line or 'デコイ持続回復' in line:
         return {'op': 'decoyHeal', 'raw': line}
     if line.startswith('弾丸チャージ') or '弾丸チャージ' in line:

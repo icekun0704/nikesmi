@@ -348,6 +348,14 @@ window.Engine = (function () {
       if (remaining <= 0) return eaten;
     }
 
+    // デコイ: 単体攻撃はまず分身が受ける
+    if (!ctx.piercesCover && target.decoyHp > 0 && frame <= (target.decoyUntil == null ? Infinity : target.decoyUntil)) {
+      var takenByDecoy = Math.min(target.decoyHp, remaining);
+      target.decoyHp -= takenByDecoy;
+      remaining -= takenByDecoy;
+      if (remaining <= 0) return takenByDecoy;
+    }
+
     if (target.shield > 0) {
       var absorbed = Math.min(target.shield, remaining);
       target.shield -= absorbed;
@@ -641,6 +649,18 @@ window.Engine = (function () {
           if (!targets[fi].fbBonusFrames || Math.abs(delta) > Math.abs(targets[fi].fbBonusFrames)) {
             targets[fi].fbBonusFrames = Math.round(delta * FPS);
           }
+        }
+        return;
+      }
+      case 'decoy': {
+        /* 分身。単体攻撃を受け止める、別枠のHPバーとして扱う。 */
+        for (var dk = 0; dk < targets.length; dk++) {
+          var dku = targets[dk];
+          var hp = u.hpMax * (effect.value || 0) / 100;
+          if (hp <= 0) continue;
+          dku.decoyHp = Math.max(dku.decoyHp || 0, hp);
+          dku.decoyMax = Math.max(dku.decoyMax || 0, hp);
+          dku.decoyUntil = dur == null ? Infinity : frame + Math.round(dur * FPS);
         }
         return;
       }
