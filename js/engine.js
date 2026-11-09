@@ -167,7 +167,7 @@ window.Engine = (function () {
       deathFrame: -1,
       now: 0,
       buffs: [],
-      counters: { attackHits: 0, attackShots: 0, pelletHits: 0, hitsTaken: 0, fullCharge: 0 },
+      counters: { attackHits: 0, attackShots: 0, pelletHits: 0, hitsTaken: 0, fullCharge: 0, critHits: 0 },
       invulnUntil: -1,
       tauntUntil: -1,
       stunUntil: -1,
@@ -762,9 +762,10 @@ window.Engine = (function () {
         var trig = bs.block.trigger || {};
         if (trig.kind !== 'counter' || trig.on !== on) continue;
         var n = trig.n || 1;
+        var count = on === 'ammoConsumed' ? ((u.team && u.team.ammo) || 0) : u.counters[on];
         // まだ1回も起きていないうちは発動しない（0 は何の倍数でもあるため）
-        if (!u.counters[on]) continue;
-        if (u.counters[on] % n !== 0) continue;
+        if (!count) continue;
+        if (count % n !== 0) continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
         if (!nthOk(bs, trig)) continue;
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
@@ -1202,9 +1203,18 @@ window.Engine = (function () {
             u.counters.fullCharge += 1;
             runEventSkills(u, team, enemies, frame, ctx, 'fullChargeShot');
           }
+          u.counters.pelletHits += (u.weapon === 'SG' ? 10 : 1);
+          if (u._lastCrit) u.counters.critHits += 1;
+          team.ammo = (team.ammo || 0) + 1;
+
           runEventSkills(u, team, enemies, frame, ctx, 'attack');
           runCounterSkills(u, team, enemies, frame, ctx, 'attackShots');
           runCounterSkills(u, team, enemies, frame, ctx, 'attackHits');
+          runCounterSkills(u, team, enemies, frame, ctx, 'pelletHits');
+          runCounterSkills(u, team, enemies, frame, ctx, 'critHits');
+          team.forEach(function (m) {
+            if (m.alive && m.hp > 0) runCounterSkills(m, team, enemies, frame, ctx, 'ammoConsumed');
+          });
 
           hitSet.forEach(function (t) { t.counters.hitsTaken += 1; });
           hitSet.forEach(function (t) {
