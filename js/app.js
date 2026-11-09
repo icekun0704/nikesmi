@@ -379,7 +379,9 @@
         renderBoard('A'); renderBoard('B');
         scheduleSim();
         var again = document.querySelector('#lv' + side);
-        if (again) { again.focus(); if (again.setSelectionRange) again.setSelectionRange(again.value.length, again.value.length); }
+        if (again) {
+          try { again.focus(); } catch (e) { /* ignore */ }
+        }
       };
       inp.addEventListener('input', function () {
         if (lvTimer) clearTimeout(lvTimer);
@@ -812,6 +814,7 @@
         units[side + '|' + i] = {
           stats: st,
           cube: (cfg.stats && cfg.stats.cube) || null,
+          quantumCube: !!(cfg.stats && cfg.stats.cube && cfg.stats.cube.id === 'quantum'),
           chargeSpeed: (cfg.stats && cfg.stats.overload && cfg.stats.overload.chargeSpeed) || 0,
           skillScale: {
             skill1: window.Stats.skillScale(skills.skill1 || 10),
