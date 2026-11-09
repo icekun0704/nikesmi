@@ -16,6 +16,8 @@
 (function () {
   var MARK = 'fantome-mark:';
   (window.SPECIALS = window.SPECIALS || {})[85] = {
+  /* 予告状・怪盗の短剣・追加ダメージはここで実装している */
+  suppress: { skill1: [0, 1, 2] },
     init: function (u, E) { u.fantome = { stacks: 0, marked: [] }; },
 
     onShot: function (u, E, frame) {

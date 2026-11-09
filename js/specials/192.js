@@ -18,6 +18,8 @@
  *   - バースト効果のうち上記2分岐の打ち分け（超火力バフは engine 側で消して調整）
  */
 (window.SPECIALS = window.SPECIALS || {})[192] = {
+  /* skill1 の追加ダメージはここで条件つきで実装している */
+  suppress: { skill1: [1] },
   init: function (u, E) {
     u.neon = {
       fire: 100,           /* 火カゲージ */
@@ -97,6 +99,16 @@
     if (!s) return;
     /* 火カチャージ状態中の通常攻撃で +2 */
     if (frame <= s.chargeUntil) s.fire = Math.min(100, s.fire + 2);
+
+    /* スキル1: フルチャージ攻撃が命中した時に 437.98%。
+     * 超火力状態のときだけ、さらに 262.79%。 */
+    if (u.weapon === 'RL' || u.weapon === 'SR') {
+      var t = u._lastTarget;
+      if (t && t.alive) {
+        E.damage(u, t, frame, { multiplierPct: 437.98 });
+        if (frame <= s.overfireUntil) E.damage(u, t, frame, { multiplierPct: 262.79 });
+      }
+    }
   },
 
   onBurst: function (u, E, frame) {
