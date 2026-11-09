@@ -787,6 +787,8 @@ window.Engine = (function () {
         if (!isFinite(secs) || secs <= 0) secs = Number(sk.ct);
         if (!isFinite(secs) || secs <= 0) secs = 20;
         var every = secs * FPS;
+        // 初回は「N秒後」。開幕0秒には発動しない。
+        if (sk.nextPeriodic <= 0) { sk.nextPeriodic = frame + every; continue; }
         if (frame < sk.nextPeriodic) continue;
         sk.nextPeriodic = frame + every;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
