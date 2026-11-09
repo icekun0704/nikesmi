@@ -64,7 +64,9 @@ payload = {
       ].map(Number),
       favorite_item_lv: pick('favorite_item_lv'),
       treasure: !!Number(d.favorite_item_tid || c.favorite_item_tid),
-      combat: pick('combat')
+      combat: pick('arena_combat') || pick('combat'),
+      arena_combat: pick('arena_combat'),
+      normal_combat: pick('combat')
     };
   })
 };

@@ -139,7 +139,9 @@ window.Sync = (function () {
                   favorite_item_lv: pick('favorite_item_lv', 'favorite_item_lv', 0),
                   treasure: !!((d.favorite_item_tid || d.favorite_tid || c.favorite_item_tid) &&
                     Number(d.favorite_item_tid || d.favorite_tid || c.favorite_item_tid) > 0),
-                  combat: pick('combat', 'combat', 0)
+                  combat: pick('arena_combat', 'arena_combat', 0) || pick('combat', 'combat', 0),
+                  arena_combat: pick('arena_combat', 'arena_combat', 0),
+                  normal_combat: pick('combat', 'combat', 0)
                 };
               })
             };
@@ -182,6 +184,8 @@ window.Sync = (function () {
     var out = {
       version: 2,
       areaId: toNumber(payload.area_id, 0),
+      partial: !!payload.partial,
+      missing: Array.isArray(payload.missing) ? payload.missing.length : 0,
       optionEffects: payload.option_effects && typeof payload.option_effects === 'object'
         ? payload.option_effects : null,
       characters: []
@@ -207,7 +211,9 @@ window.Sync = (function () {
         options: Array.isArray(raw.options) ? raw.options.map(Number) : null,
         treasure: !!(raw.treasure && raw.treasure.equipped != null ? raw.treasure.equipped : raw.treasure),
         favoriteItemLv: toNumber(raw.favorite_item_lv),
-        combat: toNumber(raw.combat)
+        /* アリーナの編成画面に出る戦闘力を優先する */
+        combat: toNumber(raw.arena_combat != null ? raw.arena_combat : raw.combat),
+        normalCombat: toNumber(raw.normal_combat != null ? raw.normal_combat : raw.combat)
       });
     });
     return out.characters.length ? out : null;
@@ -259,11 +265,16 @@ window.Sync = (function () {
     return out;
   }
 
+  /* 1つの name_code に複数の名簿エントリが対応することがある。
+   * 宝物（専用アイテム）版は同じキャラの別エントリなので、
+   * 育成状況は両方に配る（片方だけ既定値のままだと戦闘力の並びが崩れる）。 */
   function buildLookup() {
     var byCode = {};
     (window.CHARACTERS || []).forEach(function (c) {
-      if (c.treasure) return;
-      if (c.nameCode != null && byCode[String(c.nameCode)] == null) byCode[String(c.nameCode)] = c;
+      if (c.nameCode == null) return;
+      var key = String(c.nameCode);
+      if (!byCode[key]) byCode[key] = [];
+      byCode[key].push(c);
     });
     return byCode;
   }
@@ -308,12 +319,19 @@ window.Sync = (function () {
     var chars = {};
     var unknown = [];
     data.characters.forEach(function (e) {
-      var c = byCode[String(e.nameCode)];
-      if (!c) { unknown.push(e.nameCode); return; }
+      var matches = byCode[String(e.nameCode)];
+      if (!matches) { unknown.push(e.nameCode); return; }
       owned[String(e.nameCode)] = true;
       e._effects = data.optionEffects || null;
-      chars[String(c.id)] = cfgFor(e);
-      chars[String(c.id)].cubeType = cubeTypeOf(e);
+      var cfg = cfgFor(e);
+      cfg.cubeType = cubeTypeOf(e);
+      /* 戦闘力はゲームが返した値をそのまま使う（このアプリでは計算しない） */
+      cfg.combat = e.combat || 0;
+      /* 宝物版と通常版は同じキャラの別エントリ。数値は同じだが、
+       * 片方で設定を変えたときにもう片方が勝手に変わるのは避ける。 */
+      matches.forEach(function (c) {
+        chars[String(c.id)] = JSON.parse(JSON.stringify(cfg));
+      });
     });
     return {
       owned: owned,
@@ -388,12 +406,9 @@ window.SyncFetch = (function () {
     return clean;
   }
 
-  function request(path, payload) {
-    var base = proxyBase();
-    if (!base) return Promise.reject(new Error('同期サーバーが未設定です'));
-    var headers = { 'Content-Type': 'application/json' };
-    var ck = cookie();
-    if (ck) headers['X-Blablalink-Cookie'] = ck;
+  /* 一時的な失敗で「同期できない」と出るのが一番困るので、
+   * 通信そのものが失敗したときと 5xx のときは、少し待って一度だけやり直す。 */
+  function attempt(base, path, payload, headers) {
     return fetch(base + path, {
       method: 'POST',
       headers: headers,
@@ -402,9 +417,27 @@ window.SyncFetch = (function () {
       return r.json().catch(function () {
         throw new Error('同期サーバーが応答しませんでした（' + r.status + '）');
       }).then(function (data) {
-        if (!r.ok || data.error) throw new Error(data.error || ('同期サーバーが ' + r.status + ' を返しました'));
+        if (!r.ok || data.error) {
+          var err = new Error(data.error || ('同期サーバーが ' + r.status + ' を返しました'));
+          err.status = r.status;
+          throw err;
+        }
         return data;
       });
+    });
+  }
+
+  function request(path, payload) {
+    var base = proxyBase();
+    if (!base) return Promise.reject(new Error('同期サーバーが未設定です'));
+    var headers = { 'Content-Type': 'application/json' };
+    var ck = cookie();
+    if (ck) headers['X-Blablalink-Cookie'] = ck;
+    return attempt(base, path, payload, headers).catch(function (e) {
+      var transient = !e.status || e.status >= 500;
+      if (!transient) throw e;
+      return new Promise(function (r) { setTimeout(r, 900); })
+        .then(function () { return attempt(base, path, payload, headers); });
     });
   }
 
@@ -556,6 +589,11 @@ window.SyncUI = (function () {
     var result = window.Sync.applyTo(norm);
     window.Sync.save(result);
     if (window.Nikesmi) window.Nikesmi.setSync(result);
+    if (norm.partial && norm.missing) {
+      status('取り込みました — ' + Object.keys(result.owned).length + '体' +
+        '（' + norm.missing + '体ぶんの装備情報が取れませんでした。もう一度同期すると揃うことがあります）', 'warn');
+      return;
+    }
     status('取り込みました — ' + Object.keys(result.owned).length + '体', 'ok');
     setTimeout(function () {
       var sheet = document.querySelector('#syncSheet');

@@ -143,15 +143,24 @@
         if (e.cancelable) e.preventDefault();
         updateDrag(e);
       }
-      function up() {
+      function cleanup() {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
-        window.removeEventListener('pointercancel', up);
+        window.removeEventListener('pointercancel', cancel);
+      }
+      function up() {
+        cleanup();
         if (started) finishDrag(true);
+      }
+      // スクロール開始などでブラウザに奪われた場合は、置かずに取り消す
+      function cancel() {
+        cleanup();
+        delete el.dataset.dragging;
+        if (started) finishDrag(false);
       }
       window.addEventListener('pointermove', move, { passive: false });
       window.addEventListener('pointerup', up);
-      window.addEventListener('pointercancel', up);
+      window.addEventListener('pointercancel', cancel);
     });
     el.addEventListener('click', function (ev) {
       if (el.dataset.dragging) { delete el.dataset.dragging; ev.preventDefault(); ev.stopPropagation(); return; }
@@ -193,6 +202,9 @@
     return window.Stats.compute(c, s);
   }
 
+  /* このアプリの式で出した戦闘力。
+   * チャンピオンアリーナは Lv400 固定なので、そのときは Lv400 の値になる。
+   * チームの戦闘力（戦闘力補正の計算）はこちらを使う。 */
   function cpOf(entry, side) {
     var c = BY_ID[entry.charId];
     var cfg = cfgOf(entry) || {};
@@ -200,6 +212,36 @@
     s.level = levelForEntry(entry, side);
     var st = window.Stats.compute(c, s);
     return window.Stats.combatPower(st, s, cfg.skillLevels || {});
+  }
+
+  /* 名簿のカードはまだ編成に入っていないので cfg を持たない。
+   * 同期していれば、そのキャラの実際の育成状況で戦闘力を出す。 */
+  function rosterEntry(c) {
+    var chars = store.sync && store.sync.chars;
+    return { charId: c.id, cfg: (chars && chars[String(c.id)]) || null };
+  }
+
+  /* キャラを選ぶときの戦闘力。
+   * 取り込み済みならゲームが持っている値をそのまま出す（このアプリの式とは一致しない）。 */
+  function cpGame(entry, side) {
+    var cfg = cfgOf(entry) || {};
+    if (cfg.combat > 0) return cfg.combat;
+    return cpOf(entry, side);
+  }
+
+  /* 戦闘力は1体ごとにステータスを全部計算するので軽くない。
+   * 名簿は223枚あり、並べ替えでも同じキャラを何度も呼ぶため、
+   * 描画1回のあいだは結果を使い回す（renderRoster で捨てる）。 */
+  var cpCache = {};
+  function cpOfChar(c, side) {
+    var key = String(c.id) + '|' + (side || 'A') + '|' + store.mode;
+    if (cpCache[key] == null) {
+      var entry = rosterEntry(c);
+      /* 取り込み済みで、そのキャラの値が無い＝所持していない。
+       * ここで計算すると架空の戦闘力が上位に来て並びが崩れるので出さない。 */
+      cpCache[key] = (store.sync && store.sync.chars && !entry.cfg) ? 0 : cpGame(entry, side);
+    }
+    return cpCache[key];
   }
 
   function totalCp(team, side) {
@@ -248,9 +290,9 @@
           var ba = burstStages(a)[0] || 'B9', bb = burstStages(b)[0] || 'B9';
           return ba.localeCompare(bb) || a.name.localeCompare(b.name, 'ja');
         }
-        case 'atk': return statsOf({ charId: b.id }).atk - statsOf({ charId: a.id }).atk;
-        case 'hp': return statsOf({ charId: b.id }).hp - statsOf({ charId: a.id }).hp;
-        default: return cpOf({ charId: b.id }) - cpOf({ charId: a.id });
+        case 'atk': return statsOf(rosterEntry(b)).atk - statsOf(rosterEntry(a)).atk;
+        case 'hp': return statsOf(rosterEntry(b)).hp - statsOf(rosterEntry(a)).hp;
+        default: return cpOfChar(b) - cpOfChar(a);
       }
     });
     return list;
@@ -267,6 +309,7 @@
   function renderRoster() {
     var host = $('#roster');
     host.innerHTML = '';
+    cpCache = {};
     var list = rosterList();
     $('#count').textContent = list.length + '体';
 
@@ -315,7 +358,9 @@
       advSpan.style.color = ELEMENT_COLOR[beats] || '#888';
       advSpan.title = c.element + ' は ' + (beats || '—') + ' に有利';
       line.appendChild(advSpan);
-      line.appendChild(el('span', 'tacp', Math.round(cpOf({ charId: c.id }, store.editSide) / 100) / 10 + 'k'));
+      var cpv = cpOfChar(c, store.editSide);
+      line.appendChild(el('span', 'tacp',
+        cpv > 0 ? Math.round(cpv / 100) / 10 + 'k' : '—'));
       plate.appendChild(line);
 
       card.appendChild(thumb);
@@ -376,12 +421,10 @@
           e.cfg.stats.level = v;
         });
         persist();
-        renderBoard('A'); renderBoard('B');
+        // ここで renderBoard を呼ぶと input ごと作り直され、スピナーの押下が途切れる。
+        // レベルは編成を変えないので、表示だけを差し替える。
+        refreshLevelLabels(side);
         scheduleSim();
-        var again = document.querySelector('#lv' + side);
-        if (again) {
-          try { again.focus(); } catch (e) { /* ignore */ }
-        }
       };
       inp.addEventListener('input', function () {
         if (lvTimer) clearTimeout(lvTimer);
@@ -395,6 +438,30 @@
       meta.appendChild(lvWrap);
     }
     if (cp) meta.appendChild(el('span', 'cpv', Math.round(cp / 1000) + 'k'));
+  }
+
+  /* レベルの変更は編成に影響しないので、スロットとメタ表示の文字だけ更新する */
+  function refreshLevelLabels(side) {
+    var host = document.querySelector('#slots' + side);
+    if (host) {
+      Array.prototype.forEach.call(host.children, function (slot) {
+        var idx = parseInt(slot.dataset.index, 10);
+        var entry = store.teams[side][idx];
+        var lab = slot.querySelector('.lv');
+        if (!lab || !entry) return;
+        var cfg = cfgOf(entry) || {};
+        var v = (cfg.stats && cfg.stats.level) || 400;
+        lab.textContent = MODE[store.mode].levelLocked ? 'Lv400' : 'Lv' + v;
+      });
+    }
+    var meta = document.querySelector('#meta' + side);
+    if (meta) {
+      var cpv = meta.querySelector('.cpv');
+      if (cpv) {
+        var cp = totalCp(store.teams[side], side);
+        if (cp) cpv.textContent = Math.round(cp / 1000) + 'k';
+      }
+    }
   }
 
   function makeSlot(side, index) {
@@ -541,7 +608,10 @@
         var p = window.Parties.get(sel.value);
         if (!p) return;
         var units = p.units.map(function (u) {
-          return u && u.charId ? { charId: u.charId, cfg: u.cfg || null } : null;
+          if (!u || !u.charId) return null;
+          /* 保存した編成に育成状況が入っていなければ、いまの取り込み内容を使う */
+          var cfg = u.cfg || (store.sync && store.sync.chars && store.sync.chars[String(u.charId)]) || null;
+          return { charId: u.charId, cfg: cfg };
         });
         while (units.length < 5) units.push(null);
         store.teams[side] = units;
@@ -1572,7 +1642,18 @@
 
     try {
       var sync = JSON.parse(localStorage.getItem('nikesmi.sync.v1') || 'null');
-      if (sync) store.sync = sync;
+      if (sync) {
+        store.sync = sync;
+        /* 前回の続きから始めるときも、編成に残っているキャラへ
+         * 取り込み済みの育成状況を配り直す。 */
+        ['A', 'B'].forEach(function (side) {
+          store.teams[side].forEach(function (e) {
+            if (!e) return;
+            var cfg = sync.chars && sync.chars[String(e.charId)];
+            if (cfg) e.cfg = cfg;
+          });
+        });
+      }
     } catch (e) { /* ignore */ }
 
     document.querySelectorAll('#modes .mode').forEach(function (x) {
@@ -1618,7 +1699,17 @@
         persist();
       }
 
-      renderRoster();
+      /* 取り込み前に編成へ入れたキャラにも、取り込んだ育成状況を反映する。
+       * ここを飛ばすと、画面の戦闘力が既定値のまま取り残される。 */
+      ['A', 'B'].forEach(function (side) {
+        store.teams[side].forEach(function (e) {
+          if (!e) return;
+          var cfg = data.chars && data.chars[String(e.charId)];
+          if (cfg) e.cfg = cfg;
+        });
+      });
+      editing = null;
+      cpCache = {};
       renderAll();
       window.Parties && renderPartySelects();
       scheduleSim();
