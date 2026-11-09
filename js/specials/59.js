@@ -46,6 +46,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[59] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill1': [0]},
     init: function (u, E) {
       u.raven = { stacks: [], nextTick: 60, anMode: false };
 

@@ -190,6 +190,7 @@ window.Engine = (function () {
       skills: null,
       skillState: [],
       pierces: !!char.hasPenetration,
+      dots: [],
       pierceUntil: -1,
       pierceShotsLeft: 0,
       cfg: cfg
@@ -525,6 +526,25 @@ window.Engine = (function () {
       }
       case 'damage': {
         var ignoreDef = effect.type === 'ignoreDef';
+        /* 持続ダメージ: 1秒ごとに ticks 回。最初の1回はその場で与える。 */
+        if (effect.type === 'sustained' && effect.ticks > 1) {
+          for (var sd = 0; sd < targets.length; sd++) {
+            var dt = targets[sd];
+            if (!dt || !dt.alive) continue;
+            dealDamage(u, dt, frame, {
+              multiplierPct: effect.value, isSustained: true,
+              rng: ctx.rng, scale: ctx.scale, teamA: ctx.teamA, teamB: ctx.teamB
+            });
+            if (!u.dots) u.dots = [];
+            u.dots.push({
+              target: dt, value: effect.value,
+              interval: effect.interval || 1,
+              left: effect.ticks - 1,
+              nextFrame: frame + Math.round((effect.interval || 1) * FPS)
+            });
+          }
+          return;
+        }
         for (var d = 0; d < targets.length; d++) {
           dealDamage(u, targets[d], frame, {
             multiplierPct: effect.value,
@@ -683,7 +703,10 @@ window.Engine = (function () {
         if (bs.skip) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== 'periodic') continue;
-        var every = (trig.seconds || sk.ct || 20) * FPS;
+        var secs = Number(trig.seconds);
+        if (!isFinite(secs) || secs <= 0) secs = Number(sk.ct);
+        if (!isFinite(secs) || secs <= 0) secs = 20;
+        var every = secs * FPS;
         if (frame < sk.nextPeriodic) continue;
         sk.nextPeriodic = frame + every;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
@@ -1177,6 +1200,26 @@ window.Engine = (function () {
           team.forEach(function (m) {
             if (m.alive) runCounterSkills(m, team, enemies, frame, ctx, 'hitsTaken');
           });
+        });
+      });
+
+      // ---- 持続ダメージの刻み
+      [A, B].forEach(function (team) {
+        var foes = team === A ? B : A;
+        team.forEach(function (u) {
+          if (!u.alive || u.hp <= 0 || !u.dots || !u.dots.length) return;
+          for (var di = u.dots.length - 1; di >= 0; di--) {
+            var d = u.dots[di];
+            if (frame < d.nextFrame) continue;
+            if (!d.target || !d.target.alive || d.target.hp <= 0) { u.dots.splice(di, 1); continue; }
+            dealDamage(u, d.target, frame, {
+              multiplierPct: d.value, isSustained: true,
+              rng: ctx.rng, scale: ctx.scale, teamA: ctx.teamA, teamB: ctx.teamB
+            });
+            d.left -= 1;
+            d.nextFrame = frame + Math.round((d.interval || 1) * FPS);
+            if (d.left <= 0) u.dots.splice(di, 1);
+          }
         });
       });
 

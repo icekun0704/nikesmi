@@ -193,6 +193,8 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[101] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill2': [0]},
     init: function (u, E) {
       u.breddy = {
         taste: null,
@@ -920,7 +922,7 @@ window.SPECIALS = window.SPECIALS || {};
 (function () {
   (window.SPECIALS = window.SPECIALS || {})[110] = {
     /* サクラ：457.14%×9はここで実装 */
-    suppress: { burst: [0] },
+    suppress: { burst: [0, 1], skill2: [1] },
     init: function (u, E) {
       u.skState = { dots: [] };
     },
@@ -2684,6 +2686,8 @@ window.SPECIALS = window.SPECIALS || {};
   'use strict';
 
   (window.SPECIALS = window.SPECIALS || {})[136] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill2': [2]},
     init: function (u, E) {
       u._mollyShieldPrev = u.shield || 0;
     },
@@ -7885,6 +7889,8 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[199] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill1': [0, 1]},
     init: function (u, E) {
       u._kurumiHitMark = 0;
       u._kurumiDots = [];
@@ -8851,6 +8857,8 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[222] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'burst': [2]},
     init: function (u, E) {
       state(u, E);
     },
@@ -8911,7 +8919,7 @@ window.SPECIALS = window.SPECIALS || {};
       }
       s.dotTarget = target;
       s.dotNext = frame + 60;
-      s.dotLeft = 9;
+      s.dotLeft = 10;   /* 最初の1回はこの場で与える */
     }
   };
 })();
@@ -9403,6 +9411,8 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[229] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill2': [0]},
     init: function (u, E) {
       u.jill = {
         magnum: MAGNUM_SHOTS,   // 残りのマグナム弾
@@ -10890,6 +10900,8 @@ window.SPECIALS = window.SPECIALS || {};
  *   - クライマックス時の消音スタック -1（同上）
  */
 (window.SPECIALS = window.SPECIALS || {})[35] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill2': [3], 'burst': [0, 1]},
   init: function (u, E) {
     u.diesel = {
       form: null,          /* 'intro' | 'climax' */
@@ -12234,6 +12246,8 @@ function powerBloodStacks(u) {
   }
 
   (window.SPECIALS = window.SPECIALS || {})[53] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'burst': [1]},
     init: function (u, E) {
       var team = E.team(u), alive = [];
       for (var i = 0; i < team.length; i++) alive.push(team[i].alive);
@@ -12859,6 +12873,8 @@ function powerBloodStacks(u) {
   }
 
   (window.SPECIALS = window.SPECIALS || {})[59] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill1': [0]},
     init: function (u, E) {
       u.raven = { stacks: [], nextTick: 60, anMode: false };
 

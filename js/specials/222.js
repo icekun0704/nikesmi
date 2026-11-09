@@ -65,6 +65,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[222] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'burst': [2]},
     init: function (u, E) {
       state(u, E);
     },
@@ -125,7 +127,7 @@
       }
       s.dotTarget = target;
       s.dotNext = frame + 60;
-      s.dotLeft = 9;
+      s.dotLeft = 10;   /* 最初の1回はこの場で与える */
     }
   };
 })();

@@ -13,7 +13,7 @@
 (function () {
   (window.SPECIALS = window.SPECIALS || {})[110] = {
     /* サクラ：457.14%×9はここで実装 */
-    suppress: { burst: [0] },
+    suppress: { burst: [0, 1], skill2: [1] },
     init: function (u, E) {
       u.skState = { dots: [] };
     },

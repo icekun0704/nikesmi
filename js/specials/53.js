@@ -20,6 +20,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[53] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'burst': [1]},
     init: function (u, E) {
       var team = E.team(u), alive = [];
       for (var i = 0; i < team.length; i++) alive.push(team[i].alive);

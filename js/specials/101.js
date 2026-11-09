@@ -110,6 +110,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[101] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill2': [0]},
     init: function (u, E) {
       u.breddy = {
         taste: null,

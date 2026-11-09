@@ -37,6 +37,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[229] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill2': [0]},
     init: function (u, E) {
       u.jill = {
         magnum: MAGNUM_SHOTS,   // 残りのマグナム弾

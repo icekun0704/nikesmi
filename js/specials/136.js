@@ -23,6 +23,8 @@
   'use strict';
 
   (window.SPECIALS = window.SPECIALS || {})[136] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill2': [2]},
     init: function (u, E) {
       u._mollyShieldPrev = u.shield || 0;
     },

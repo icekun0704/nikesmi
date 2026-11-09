@@ -51,6 +51,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[199] = {
+  /* 持続ダメージの刻みはエンジン側で行う */
+  suppress: {'skill1': [0, 1]},
     init: function (u, E) {
       u._kurumiHitMark = 0;
       u._kurumiDots = [];

@@ -352,18 +352,18 @@ def parse_effect(text, treasure):
     if m:
         base = float(m.group(2)) if treasure and m.group(2) else float(m.group(1))
         tail = m.group(3) or ''
-        return {
+        return add_dot_fields({
             'op': 'damage',
             'value': base,
             'type': classify_damage_type(tail),
             'raw': line,
-        }
+        }, line)
 
     m = re.search(r'最終攻撃力' + NUM + r'%(?:→' + NUM + r'%)?の(.*?)ダメージ', line)
     if m:
         base = float(m.group(2)) if treasure and m.group(2) else float(m.group(1))
-        return {'op': 'damage', 'value': base,
-                'type': classify_damage_type(m.group(3) or ''), 'raw': line}
+        return add_dot_fields({'op': 'damage', 'value': base,
+                'type': classify_damage_type(m.group(3) or ''), 'raw': line}, line)
 
     # ---- recovery --------------------------------------------------------
     m = re.search(r'最終最大HPの' + NUM + r'%(?:→' + NUM + r'%)?(?:を|の)?(?:回復|持続回復)', line)
@@ -508,8 +508,8 @@ def parse_effect(text, treasure):
     m = re.search(r'最終攻撃力の?' + NUM + r'%(?:→' + NUM + r'%)?\s*(?:の)?\s*(追加|バーストスキル)?ダメージ', line)
     if m:
         base = float(m.group(2)) if treasure and m.group(2) else float(m.group(1))
-        return {'op': 'damage', 'value': base,
-                'type': classify_damage_type((m.group(3) or '') + line), 'raw': line}
+        return add_dot_fields({'op': 'damage', 'value': base,
+                'type': classify_damage_type((m.group(3) or '') + line), 'raw': line}, line)
     m = re.search(r'チャージダメージ' + NUM + r'%倍率▲', line)
     if m:
         out = {'op': 'stat', 'stat': 'chargeDmgMultPct', 'value': float(m.group(1)),
@@ -569,11 +569,38 @@ def parse_effect(text, treasure):
     m = re.search(NUM + r'%(?:→' + NUM + r'%)?のダメージ', line)
     if m:
         base = float(m.group(2)) if treasure and m.group(2) else float(m.group(1))
-        return {'op': 'damage', 'value': base, 'type': classify_damage_type(line), 'raw': line}
+        eff = {'op': 'damage', 'value': base, 'type': classify_damage_type(line), 'raw': line}
+        # 持続ダメージは「1秒間隔：10秒間維持」ぶんだけ刻む
+        if eff['type'] == 'sustained':
+            mi = re.search(r'(' + NUM + r')秒間隔', line)
+            md = re.search(r'(' + NUM + r')秒間維持', line)
+            if mi and md:
+                eff['interval'] = float(mi.group(1))
+                eff['ticks'] = max(1, int(round(float(md.group(1)) / float(mi.group(1)))))
+            elif md:
+                eff['interval'] = 1.0
+                eff['ticks'] = max(1, int(round(float(md.group(1)))))
+        return eff
 
     if META_EOF.search(line) or META_TAIL.search(line):
         return {'op': 'meta', 'raw': line}
     return {'op': 'unparsed', 'raw': line}
+
+
+
+def add_dot_fields(eff, line):
+    """持続ダメージに、刻み間隔と回数を足す。"""
+    if eff.get('type') != 'sustained' or eff.get('ticks'):
+        return eff
+    mi = re.search(r'(' + NUM + r')秒間隔', line)
+    md = re.search(r'(' + NUM + r')秒間維持', line)
+    if mi and md:
+        eff['interval'] = float(mi.group(1))
+        eff['ticks'] = max(1, int(round(float(md.group(1)) / float(mi.group(1)))))
+    elif md:
+        eff['interval'] = 1.0
+        eff['ticks'] = max(1, int(round(float(md.group(1)))))
+    return eff
 
 
 def classify_damage_type(tail):
@@ -712,7 +739,9 @@ def parse_trigger(text, slot, ct):
         if slot == 'burst':
             return {'kind': 'burst'}
         if ct and ct != 'パッシブ':
-            return {'kind': 'periodic', 'seconds': ct}
+            mct = re.search(NUM, ct)
+            if mct:
+                return {'kind': 'periodic', 'seconds': float(mct.group(1))}
         return {'kind': 'always'}
 
     # strip leading "N回目：" "効果N：" etc
@@ -828,7 +857,10 @@ def parse_trigger(text, slot, ct):
         return {'kind': 'unknown', 'text': t}
 
     if ct and ct != 'パッシブ':
-        return {'kind': 'periodic', 'seconds': ct}
+        mct = re.search(NUM, ct)
+        if mct:
+            return {'kind': 'periodic', 'seconds': float(mct.group(1))}
+        return {'kind': 'always'}
 
     return {'kind': 'always'}
 
