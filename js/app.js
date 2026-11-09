@@ -584,6 +584,8 @@
       var cfg = cfgOf(entry) || {};
       var lv = (cfg.stats && cfg.stats.level) || 400;
       meta.appendChild(el('span', 'lv', MODE[store.mode].levelLocked ? 'Lv400' : 'Lv' + lv));
+      var cpv = cpOf(entry, side);
+      meta.appendChild(el('span', 'cps', cpv > 0 ? (Math.round(cpv / 100) / 10) + 'k' : '—'));
       txt.appendChild(meta);
       slot.appendChild(txt);
 
