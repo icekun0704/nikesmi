@@ -695,9 +695,17 @@ window.Engine = (function () {
         if (trig.kind !== 'always' && trig.kind !== 'battleStart') continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
         if (trig.kind === 'battleStart' && frame > 0) continue;
-        // 常時パッシブはダメージを与えない。ダメージを含むブロックが
-        // 常時扱いになっているのは解釈違いなので、発動させない。
-        if (bs.block.effects.some(function (ef) { return ef.op === 'damage'; })) continue;
+        // 常時パッシブはダメージを与えない。ダメージ効果だけを外して、
+        // 同じブロックにあるバフなどは活かす。
+        var blk = bs.block;
+        if (blk.effects.some(function (ef) { return ef.op === 'damage'; })) {
+          var rest = blk.effects.filter(function (ef) { return ef.op !== 'damage'; });
+          if (!rest.length) continue;
+          bs.block = Object.assign({}, blk, { effects: rest });
+          fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
+          bs.block = blk;
+          continue;
+        }
         fireSkillBlock(u, skill, sk, bs, team, enemies, frame, ctx);
       }
     }
