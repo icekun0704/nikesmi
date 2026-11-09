@@ -144,6 +144,12 @@ for (const m of cases.slice(0, limit)) {
   errors.push({ actual, predicted, rate: r.winRate, a: m.attacker_team.join(','), b: m.defender_team.join(',') });
 }
 
+const acc = 100 * correct / Math.max(1, total);
+if (total >= 100 && acc < 50) {
+  console.log('[NG] 精度が ' + acc.toFixed(1) + '% まで落ちています（対応表かエンジンが壊れています）');
+  process.exitCode = 1;
+}
+
 const ms = Date.now() - t0;
 console.log('corpus', corpus, 'cases', total, 'skipped', skipped);
 console.log('accuracy', (100 * correct / total).toFixed(1) + '%',
