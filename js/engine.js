@@ -174,6 +174,7 @@ window.Engine = (function () {
       tauntUntil: -1,
       stunUntil: -1,
       shieldUntil: 0,
+      infiniteMagUntil: -1,
       shareGroup: null,
       lifestealPct: 0,
       lifestealUntil: 0,
@@ -622,6 +623,13 @@ window.Engine = (function () {
           if (!targets[fi].fbBonusFrames || Math.abs(delta) > Math.abs(targets[fi].fbBonusFrames)) {
             targets[fi].fbBonusFrames = Math.round(delta * FPS);
           }
+        }
+        return;
+      }
+      case 'infiniteMagazine': {
+        var mdur = effect.duration == null ? 10 : effect.duration;
+        for (var im = 0; im < targets.length; im++) {
+          targets[im].infiniteMagUntil = frame + Math.round(mdur * FPS);
         }
         return;
       }
@@ -1135,6 +1143,12 @@ window.Engine = (function () {
             u.firing.character.chargeSpeedPercent = u.firing.baseChargeSpeed + sumStat(u, 'chargeSpeedPct');
           }
           var shot = Gauge.fireFiring(u.firing, frame);
+          // 装弾数無限: リロードを挟まずに撃ち続ける
+          if (shot.reloaded && u.infiniteMagUntil > frame) {
+            u.firing.shotsInMagazine = 0;
+            u.firing.reloadingUntil = -1;
+            u.firing.nextFrame = frame + (u.firing.interval || 6);
+          }
           // チャージ時間固定（スノーホワイト：HA / リバーレリオ など）
           if (u.chargeFixed) u.firing.nextFrame = frame + u.chargeFixed;
           u.shots += 1;
