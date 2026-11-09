@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 global.window = {};
-['data', 'stat_data', 'skills', 'gauge', 'stats', 'engine'].forEach(f => require('../js/' + f + '.js'));
+['data', 'stat_data', 'skills', 'gauge', 'stats', 'cubes', 'specials', 'engine'].forEach(f => require('../js/' + f + '.js'));
 Object.assign(global, window);
 
 const C = window.CHARACTERS;

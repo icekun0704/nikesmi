@@ -19,7 +19,11 @@
  */
 (window.SPECIALS = window.SPECIALS || {})[192] = {
   /* skill1 の追加ダメージはここで条件つきで実装している */
-  suppress: { skill1: [1] },
+  /* skill2 の 0（戦闘開始 火カゲージ100）と 1（通常攻撃ごと +2）は、パーサが
+   * バーストゲージの加算として解釈してしまう。ここで止めないと、開始フレームの
+   * 時点でチームのゲージが100に達し、B1/B2/B3 が 26/58/90F で一気に出てしまう
+   * （実測でその状態だった）。火カゲージはこのファイル内の u.neon.fire で持つ。 */
+  suppress: { skill1: [1], skill2: [0, 1] },
   init: function (u, E) {
     u.neon = {
       fire: 100,           /* 火カゲージ */
@@ -38,15 +42,9 @@
     var s = u.neon;
     if (!s) return;
 
-    /* ---- パーサは「火カゲージ」を burst ゲージに変換してしまっている。
-     *       戦闘開始の100と、通常攻撃ごとの2を打ち消して、burst ゲージには
-     *       一切影響させない（火カゲージはこのファイルで自前に持つ）。 */
-    if (frame === 0) E.gauge(u.side, -100);
-    var newShots = u.shots - s.shotAnchor;
-    if (newShots > 0) {
-      s.shotAnchor = u.shots;
-      E.gauge(u.side, -2 * newShots);
-    }
+    /* パーサ側の加算は suppress で止めてあるので、ここでの打ち消しは不要。
+     * 火カゲージは u.neon.fire で自前に持つ。 */
+    s.shotAnchor = u.shots;
 
     /* ---- 被弾検知（HP の減少） */
     var lost = (s.prevHp - u.hp) - (u.hpMax - s.prevHpMax);

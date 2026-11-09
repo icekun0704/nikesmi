@@ -5,6 +5,8 @@ require('../js/stat_data.js');
 require('../js/skills.js');
 require('../js/gauge.js');
 require('../js/stats.js');
+require('../js/cubes.js');
+require('../js/specials.js');
 require('../js/engine.js');
 Object.assign(global, window);
 
