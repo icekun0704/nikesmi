@@ -94,6 +94,19 @@ Object.keys(DB).forEach(function (key) {
         report('burst-slot-always', key + ' ' + slot + '#' + i + ' ' + b.raw);
       }
 
+      /* 4e. 解釈した数値が、その行の原文に載っているか（転記ミス検出） */
+      (b.effects || []).forEach(function (e) {
+        if (e.value == null || e.op === 'unparsed' || e.op === 'meta') return;
+        var raw = e.raw || '';
+        var n = Number(e.value);
+        var forms = [String(e.value), String(Math.round(n * 10) / 10),
+                     String(Math.round(n * 100) / 100), String(Math.round(n))];
+        for (var fi = 0; fi < forms.length; fi++) {
+          if (raw.indexOf(forms[fi]) >= 0) return;
+        }
+        report('value-not-in-text', key + ' ' + slot + '#' + i + ' ' + e.op + '=' + e.value + ' | ' + raw.slice(0, 40));
+      });
+
       /* 5. 回数指定だけ残って本体が常時のブロック（回数が無視される） */
       if (t.nth && t.kind === 'always') {
         report('nth-without-trigger', key + ' ' + slot + '#' + i + ' ' + b.raw);
