@@ -12,6 +12,8 @@
  *     パーサは trigger=unknown のため発動しない。
  */
 (window.SPECIALS = window.SPECIALS || {})[115] = {
+  /* 貫通ダメージバフはここで実装している */
+  suppress: { skill2: [0] },
   init: function (u, E) {
     u.ade = {
       lens: 0,

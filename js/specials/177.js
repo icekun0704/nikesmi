@@ -16,6 +16,8 @@
  *   - 宝物（Treasure1/2/3）専用行はこの形態には付かない。
  */
 (window.SPECIALS = window.SPECIALS || {})[177] = {
+  /* 回復量バフはここで実装している */
+  suppress: { skill1: [0] },
   init: function (u, E) {
     /* スキル定義をこのユニット専用に複製し、誤って解釈されている battleStart ブロックを空にする */
     var src = window.SKILL_DB && window.SKILL_DB[u.skillKey];
