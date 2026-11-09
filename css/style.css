@@ -333,7 +333,7 @@ button,select,input{font-family:inherit;font-size:inherit;color:inherit}
 
 /* --------------------------------------------------------------- transport */
 .transport{
-  display:flex;align-items:center;gap:10px;padding:0 20px;
+  display:flex;align-items:center;gap:10px;padding:0 20px;min-width:0;
   background:rgba(8,9,13,.8);border-top:1px solid var(--line);backdrop-filter:blur(12px);
 }
 .tbtn{
@@ -476,8 +476,19 @@ html,body{max-width:100%;overflow-x:hidden}
   .stagehead{gap:6px;flex-wrap:wrap}
   .rosterpane{padding-bottom:8px}
 }
+/* 長い名前・数値でトラックが伸びて横にずれるのを防ぐ（横スクロールの主因） */
+.boards,.board,.slots,.slot,.boardhead,.boardmeta,.rosterpane,.stage,.stagebody,.canvaswrap{min-width:0}
+.slot .nm,.card .nm{overflow-wrap:anywhere;word-break:break-word}
+#tl{max-width:100%}
+.rostercards,.roster{max-width:100%}
+
 @media (max-width:640px){
-  .slots{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .slots{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .slot{padding:5px 4px 6px 4px;gap:5px}
+  .slot .txt{padding-right:8px}
+  .slot .nm{font-size:10px;line-height:1.2;max-height:2.4em;overflow:hidden}
+  .slot .meta{font-size:9px}
+  .slot .pnum{font-size:8px;right:4px;top:2px}
   .slot{min-height:84px}
   .boardhead{flex-wrap:wrap;gap:6px}
   .rosterbar{gap:6px;padding:8px 12px}
@@ -486,7 +497,9 @@ html,body{max-width:100%;overflow-x:hidden}
   .topbar{padding:8px 12px;gap:8px}
   .brand-sub{display:none}
   .modehint{display:none}
-  .transport{padding:0 10px;gap:6px}
+  /* 子要素が縮まずに transport が 9px はみ出し、スマホで横にずれていた */
+  .transport{padding:0 10px;gap:6px;flex-wrap:wrap;row-gap:4px;min-height:0;height:auto}
+  .transport > *{min-width:0;flex:0 1 auto}
   .readout{font-size:11px}
   .canvaswrap{height:104px}
 }
