@@ -563,10 +563,19 @@ window.Engine = (function () {
         return;
       }
       case 'heal': {
-        var amount;
-        if (effect.basis === 'casterMaxHp') amount = u.hpMax * effect.value / 100;
-        else amount = u.hpMax * effect.value / 100;
-        for (var h = 0; h < targets.length; h++) heal(targets[h], amount, frame);
+        var amount = u.hpMax * effect.value / 100;
+        var hot = effect.ticks > 1;
+        for (var h = 0; h < targets.length; h++) {
+          heal(targets[h], amount, frame);
+          if (hot && targets[h] && targets[h].alive) {
+            if (!u.dots) u.dots = [];
+            u.dots.push({
+              kind: 'heal', target: targets[h], amount: amount,
+              interval: effect.interval || 1, left: effect.ticks - 1,
+              nextFrame: frame + Math.round((effect.interval || 1) * FPS)
+            });
+          }
+        }
         return;
       }
       case 'shield': {
@@ -1238,10 +1247,14 @@ window.Engine = (function () {
             var d = u.dots[di];
             if (frame < d.nextFrame) continue;
             if (!d.target || !d.target.alive || d.target.hp <= 0) { u.dots.splice(di, 1); continue; }
-            dealDamage(u, d.target, frame, {
-              multiplierPct: d.value, isSustained: true,
-              rng: ctx.rng, scale: ctx.scale, teamA: ctx.teamA, teamB: ctx.teamB
-            });
+            if (d.kind === 'heal') {
+              heal(d.target, d.amount, frame);
+            } else {
+              dealDamage(u, d.target, frame, {
+                multiplierPct: d.value, isSustained: true,
+                rng: ctx.rng, scale: ctx.scale, teamA: ctx.teamA, teamB: ctx.teamB
+              });
+            }
             d.left -= 1;
             d.nextFrame = frame + Math.round((d.interval || 1) * FPS);
             if (d.left <= 0) u.dots.splice(di, 1);

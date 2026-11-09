@@ -261,6 +261,15 @@ def parse_effect(text, treasure):
                 eff['duration'] = float(dur.group(1))
             elif '：持続' in text or text.endswith('持続'):
                 eff['duration'] = None
+        # 毎秒回復するものは、その回数ぶん刻む
+        if eff.get('op') == 'heal' and 'ticks' not in eff:
+            md = re.search(r'(' + NUM + r')秒間維持', text)
+            mi = re.search(r'(' + NUM + r')秒間隔', text)
+            if md and (mi or '毎秒' in text):
+                iv = float(mi.group(1)) if mi else 1.0
+                if iv > 0:
+                    eff['interval'] = iv
+                    eff['ticks'] = max(1, int(round(float(md.group(1)) / iv)))
     return eff
 
 
