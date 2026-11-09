@@ -18,7 +18,7 @@ var TRIGGERS = {
   always: 1, battleStart: 1, periodic: 1, counter: 1, burst: 1, burstStage: 1,
   fullBurst: 1, fullBurstEnd: 1, allyBurst: 1, enemyDeath: 1, allyDeath: 1,
   selfDeath: 1, lastBullet: 1, reload: 1, fullChargeShot: 1, hitTaken: 1,
-  attack: 1, never: 1, unknown: 1
+  attack: 1, lethalHit: 1, never: 1, unknown: 1
 };
 
 var problems = [];

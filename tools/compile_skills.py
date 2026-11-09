@@ -852,7 +852,7 @@ def _parse_trigger(text, slot, ct):
         (r'^味方が倒れた時', {'kind': 'allyDeath'}),
         (r'^敵が倒れた時', {'kind': 'enemyDeath'}),
         (r'^自分が倒れた時', {'kind': 'selfDeath'}),
-        (r'^戦闘不能に至る攻撃を受けると', {'kind': 'unknown', 'text': '戦闘不能に至る攻撃を受けると'}),
+        (r'^戦闘不能に至る攻撃を受けると', {'kind': 'lethalHit'}),
         (r'^戦闘開始時', {'kind': 'battleStart'}),
         (r'^被弾した時', {'kind': 'hitTaken'}),
     ]

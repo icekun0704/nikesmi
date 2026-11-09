@@ -389,6 +389,13 @@ window.Engine = (function () {
 
     var dmg = base * (opts.multiplierPct / 100) * bonus * element * charge * (1 + up / 100) * taken;
     dmg *= opts.scale == null ? 1 : opts.scale;
+
+    /* 戦闘不能に至る一撃を受ける直前に発動する効果（不死など） */
+    if (target.hp - dmg <= 0 && target.alive && !target._lethalFired && target.team && target.foes) {
+      target._lethalFired = true;
+      runTriggered(target, target.team, target.foes, frame,
+        { rng: opts.rng, scale: opts.scale, teamA: opts.teamA, teamB: opts.teamB }, 'lethalHit');
+    }
     return applyDamage(target, dmg, attacker, frame,
       Object.assign({ piercesCover: (!!opts.isBurst && !!opts.aoe) || !!opts.ignoreDef }, opts));
   }
@@ -881,8 +888,8 @@ window.Engine = (function () {
     }));
     if (!A.length || !B.length) return { error: '両チームに1機以上必要です' };
 
-    A.forEach(function (u) { u.team = A; });
-    B.forEach(function (u) { u.team = B; });
+    A.forEach(function (u) { u.team = A; u.foes = B; });
+    B.forEach(function (u) { u.team = B; u.foes = A; });
 
     var state = {
       A: { gauge: 0, chain: [], chainIndex: 0, fullBurstUntil: -1, fullBurst: false,
