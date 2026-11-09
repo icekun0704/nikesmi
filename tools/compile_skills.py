@@ -251,7 +251,7 @@ META_TAIL = re.compile(r'(?:解除不可|解除)$')
 def parse_effect(text, treasure):
     eff = _parse_effect(text, treasure)
     # 個別ルールはスタック数や持続時間を取りこぼすので、ここで補う
-    if isinstance(eff, dict) and eff.get('op') in ('stat', 'flatStat', 'damage', 'shield', 'heal', 'lifesteal'):
+    if isinstance(eff, dict) and eff.get('op') not in ('unparsed', 'meta'):
         st = STACK_RE.search(text)
         if st and 'stacks' not in eff and 'maxStacks' not in eff:
             eff['stacks'] = int(st.group(1))
@@ -261,6 +261,11 @@ def parse_effect(text, treasure):
                 eff['duration'] = float(dur.group(1))
             elif '：持続' in text or text.endswith('持続'):
                 eff['duration'] = None
+        if 'maxTriggers' not in eff:
+            lim = LIMIT_RE.search(text)
+            if lim:
+                eff['maxTriggers'] = int(lim.group(1))
+        return eff
         # 毎秒回復するものは、その回数ぶん刻む
         if eff.get('op') == 'heal' and 'ticks' not in eff:
             md = re.search(r'(' + NUM + r')秒間維持', text)
