@@ -346,14 +346,27 @@
         thumb.appendChild(el('div', 'fallback', c.name.charAt(0)));
       }
 
-      thumb.appendChild(el('span', 'badgeB', burstStages(c)[0] || ''));
-      var dot = el('span', 'badgeE');
-      dot.style.background = ELEMENT_COLOR[c.element] || '#888';
-      thumb.appendChild(dot);
+      /* 左上に 属性 / 武器 / バースト段階 を縦に積む（ゲーム内の札と同じ並び）。 */
+      var icons = el('div', 'icons');
+      var elIcon = el('span', 'ic el', String(c.element || '').charAt(0));
+      elIcon.style.setProperty('--el', ELEMENT_COLOR[c.element] || '#888');
+      elIcon.title = c.element || '';
+      icons.appendChild(elIcon);
+      icons.appendChild(el('span', 'ic wp', c.weapon || ''));
+      var stage = burstStages(c)[0] || '';
+      var roman = { B1: 'I', B2: 'II', B3: 'III' }[stage] || '';
+      var bIcon = el('span', 'ic bs ' + stage.toLowerCase(), roman);
+      bIcon.title = 'バースト' + stage.replace('B', '');
+      icons.appendChild(bIcon);
+      thumb.appendChild(icons);
       if (c.treasure) thumb.appendChild(el('span', 'treasure', '宝物'));
 
       var plate = el('div', 'plate');
-      plate.appendChild(el('div', 'nm', c.name));
+      var top = el('div', 'ptop');
+      top.appendChild(el('span', 'lv', 'Lv.' + (levelForEntry({ charId: c.id, cfg: rosterEntry(c).cfg }, store.editSide) || 400)));
+      top.appendChild(el('span', 'nm', c.name));
+      plate.appendChild(top);
+
       var clsTag = { '火力型': '火力', '防御型': '防御', '支援型': '支援' }[c.classType] || c.classType;
       var beats = ELEMENT_BEATS[c.element];
       var line = el('div', 'sub');
@@ -405,14 +418,14 @@
   }
 
   /* IntersectionObserver が発火しない環境（非表示タブなど）でも止まらないよう、
-   * スクロール時にも番人の位置を見る。 */
+   * スクロール時にも末尾カードの位置を見る。 */
   function maybeAppendMore() {
     if (!rosterQueue.length || !rosterHost) return;
-    var m = rosterHost.querySelector('.roster-more');
-    if (!m) return;
-    var r = m.getBoundingClientRect();
+    var last = rosterHost.lastElementChild;
+    if (!last) return;
+    var r = last.getBoundingClientRect();
     var vh = window.innerHeight || 0;
-    if (r.top < vh + 600) appendRosterChunk();
+    if (r.bottom < vh + 600) appendRosterChunk();
   }
 
   var ROSTER_CHUNK = 60;
@@ -421,8 +434,6 @@
   function appendRosterChunk() {
     if (!rosterHost) return;
     if (rosterObserver) { rosterObserver.disconnect(); rosterObserver = null; }
-    var sentinel = rosterHost.querySelector('.roster-more');
-    if (sentinel && sentinel.parentNode) sentinel.parentNode.removeChild(sentinel);
     var frag = document.createDocumentFragment();
     var n = 0;
     while (rosterQueue.length && n < ROSTER_CHUNK) {
@@ -431,15 +442,14 @@
     }
     rosterHost.appendChild(frag);
     if (!rosterQueue.length) return;
-    var more = el('div', 'roster-more');
-    rosterHost.appendChild(more);
-    if (!('IntersectionObserver' in window)) { appendRosterChunk(); return; }
+    /* 番人を別要素で置くとグリッドに行が1つ増えて隙間が空くので、末尾カードを見張る。 */
+    if (!('IntersectionObserver' in window)) return;
     rosterObserver = new IntersectionObserver(function (entries) {
       for (var i = 0; i < entries.length; i++) {
         if (entries[i].isIntersecting) { appendRosterChunk(); return; }
       }
     }, { rootMargin: '600px 0px' });
-    rosterObserver.observe(more);
+    rosterObserver.observe(rosterHost.lastElementChild);
   }
 
   /* ------------------------------------------------------------------ board */
@@ -547,10 +557,16 @@
 
     if (!entry) {
       slot.classList.add('empty');
-      slot.appendChild(el('span', 'plus', '＋'));
+      var plus = el('span', 'plus');
+      plus.appendChild(el('span', null, '＋'));
+      slot.appendChild(plus);
       slot.appendChild(el('span', 'pnum', 'P' + (index + 1)));
     } else {
       var c = BY_ID[entry.charId];
+      var stage = burstStages(c)[0];
+      if (stage === 'B1') slot.classList.add('b1');
+      else if (stage === 'B2') slot.classList.add('b2');
+      else if (stage === 'B3') slot.classList.add('b3');
       var p = portraitOf(c);
       if (p) {
         var img = document.createElement('img');
@@ -1155,13 +1171,13 @@
 
   /* タイムラインの配色。css/style.css の変数と揃える。 */
   var PAL = {
-    a: '#35e0b4', aSoft: '#bfeedd',
-    b: '#ff9a4d', bSoft: '#f8d9b6',
+    a: '#3eafff', aSoft: '#cfe8ff',
+    b: '#ff6b4a', bSoft: '#ffd2c7',
     grid: 'rgba(255,255,255,.05)',
-    axis: '#5c6678',
-    text: '#6d788a',
-    death: '#ff5d76',
-    plate: '#0a0c10'
+    axis: '#5f7691',
+    text: '#8b9bb0',
+    death: '#f53636',
+    plate: '#070a10'
   };
 
   /* 遮蔽物の残り。hpSeries は [フレーム, HP, 遮蔽物] の3つ組。 */
