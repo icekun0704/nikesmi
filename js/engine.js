@@ -710,6 +710,15 @@ window.Engine = (function () {
       var c = conds[i];
       if (c.kind === 'selfHpAbove' && (u.hp / u.hpMax) * 100 < c.pct) return false;
       if (c.kind === 'selfHpBelow' && (u.hp / u.hpMax) * 100 > c.pct) return false;
+      if (c.kind === 'allyLowestHpBelow') {
+        var mates = (u.team || []).filter(function (x) { return x.alive && x.hp > 0; });
+        if (!mates.length) return false;
+        var sorted = mates.slice().sort(function (a, b) {
+          return (a.hp / a.hpMax) - (b.hp / b.hpMax);
+        });
+        var pickLow = sorted[Math.min(c.n || 1, sorted.length) - 1];
+        if (!pickLow || (pickLow.hp / pickLow.hpMax) * 100 > c.pct) return false;
+      }
     }
     return true;
   }

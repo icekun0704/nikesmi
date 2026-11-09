@@ -909,9 +909,9 @@ def parse_condition(text):
     m = re.search(r'自分のHPが' + NUM + r'%以下', t)
     if m:
         conds.append({'kind': 'selfHpBelow', 'pct': float(m.group(1))})
-    m = re.search(r'残りのHPの割合が最も低い味方\d機がHP' + NUM + r'%以下', t)
+    m = re.search(r'残りのHPの割合が最も低い味方(\d)機がHP' + NUM + r'%以下', t)
     if m:
-        conds.append({'kind': 'allyLowestHpBelow', 'pct': float(m.group(1))})
+        conds.append({'kind': 'allyLowestHpBelow', 'n': int(m.group(1)), 'pct': float(m.group(2))})
     return conds
 
 
