@@ -34,6 +34,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[43] = {
+  /* 遮蔽物の回復・復活・最大HPはここで実装している */
+  suppress: { skill2: [1], burst: [0, 1] },
     init: function (u, E) {
       st(u);
     },

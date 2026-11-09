@@ -10489,6 +10489,8 @@ window.SPECIALS = window.SPECIALS || {};
  *     付いたフレームを開始点として10秒間を「フルバースト中」とみなす。
  */
 (window.SPECIALS = window.SPECIALS || {})[30] = {
+  /* 遮蔽物の回復はここで実装している */
+  suppress: { skill2: [0] },
   init: function (u, E) {
     u.tsubai = {
       pierceUntil: -1,   // 貫通学概論の終了
@@ -11523,6 +11525,8 @@ window.SPECIALS = window.SPECIALS || {};
   }
 
   (window.SPECIALS = window.SPECIALS || {})[43] = {
+  /* 遮蔽物の回復・復活・最大HPはここで実装している */
+  suppress: { skill2: [1], burst: [0, 1] },
     init: function (u, E) {
       st(u);
     },
@@ -13596,6 +13600,8 @@ function powerBloodStacks(u) {
   }
 
   (window.SPECIALS = window.SPECIALS || {})[68] = {
+  /* 遮蔽物の回復はここで実装している */
+  suppress: { skill1: [0] },
     init: function (u, E) {
       u.naga = { shots: 0, pendingBurstCheck: false, checkFrame: -1 };
     },

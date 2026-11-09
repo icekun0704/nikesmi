@@ -18,6 +18,8 @@
   }
 
   (window.SPECIALS = window.SPECIALS || {})[68] = {
+  /* 遮蔽物の回復はここで実装している */
+  suppress: { skill1: [0] },
     init: function (u, E) {
       u.naga = { shots: 0, pendingBurstCheck: false, checkFrame: -1 };
     },
