@@ -102,6 +102,7 @@ window.Engine = (function () {
     var b = {
       key: key, slotKey: ident, stat: stat, value: value, dir: dir, until: until,
       stacks: 1, maxStacks: (opts.maxStacks || 1) + (u.stackBonus || 0),
+      shotsLeft: opts.shots == null ? null : opts.shots,
       aura: !!opts.aura, refreshed: u.now, label: opts.label
     };
     u.buffs.push(b);
@@ -516,16 +517,16 @@ window.Engine = (function () {
               : stat === 'defPct' ? defEff(u)
               : u.hpMaxBase;
             buff(t, keyBase + ':' + t.pos, flatKey, basis * value / 100, effect.dir, until,
-              { slotKey: slotBase + ':' + t.pos });
+              { slotKey: slotBase + ':' + t.pos, shots: effect.shots });
             continue;
           }
           if (effect.dir === 'down' && (stat === 'atkPct' || stat === 'defPct' || stat === 'maxHpPct')) {
             buff(t, keyBase + ':' + t.pos, stat, value, 'down', until,
-              { slotKey: slotBase + ':' + t.pos });
+              { slotKey: slotBase + ':' + t.pos, shots: effect.shots });
             continue;
           }
           buff(t, keyBase + ':' + t.pos, stat, value, effect.dir || 'up', until,
-            { maxStacks: effect.stacks || 1, slotKey: slotBase + ':' + t.pos });
+            { maxStacks: effect.stacks || 1, slotKey: slotBase + ':' + t.pos, shots: effect.shots });
         }
         return;
       }
@@ -1320,6 +1321,17 @@ window.Engine = (function () {
             runCounterSkills(u, team, enemies, frame, ctx, 'fullCharge');
             runEventSkills(u, team, enemies, frame, ctx, 'fullChargeShot');
           }
+          /* 「1発間維持」のバフを、この射撃を使った後に消化する */
+          if (u.buffs.length) {
+            for (var sb2 = u.buffs.length - 1; sb2 >= 0; sb2--) {
+              var bb2 = u.buffs[sb2];
+              if (bb2.shotsLeft == null) continue;
+              if (bb2.refreshed >= frame) continue;
+              bb2.shotsLeft -= 1;
+              if (bb2.shotsLeft <= 0) u.buffs.splice(sb2, 1);
+            }
+          }
+
           u.counters.pelletHits += (u.weapon === 'SG' ? 10 : 1);
           if (u._lastCrit) u.counters.critHits += 1;
           team.ammo = (team.ammo || 0) + 1;
