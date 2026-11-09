@@ -19,6 +19,8 @@
   var MAX_MAG = 4;
 
   (window.SPECIALS = window.SPECIALS || {})[165] = {
+  /* バーストの攻撃力バフはここで実装している */
+  suppress: { burst: [1] },
     init: function (u, E) {
       u.eh = {
         scrap: 10,        // 戦闘開始時に10個

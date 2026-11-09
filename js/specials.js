@@ -3702,6 +3702,8 @@ window.SPECIALS = window.SPECIALS || {};
  * 宝物1/2/3 の行はこの形態（treasure=true）にのみ付くので、そのまま実装している。
  */
 (window.SPECIALS = window.SPECIALS || {})[146] = {
+  /* バーストの攻撃力・会心ダメージはここで実装している */
+  suppress: { burst: [0] },
   init: function (u, E) {
     u.miranda = {
       burstFrame: -1,
@@ -4759,6 +4761,8 @@ window.SPECIALS = window.SPECIALS || {};
   var MAX_MAG = 4;
 
   (window.SPECIALS = window.SPECIALS || {})[165] = {
+  /* バーストの攻撃力バフはここで実装している */
+  suppress: { burst: [1] },
     init: function (u, E) {
       u.eh = {
         scrap: 10,        // 戦闘開始時に10個

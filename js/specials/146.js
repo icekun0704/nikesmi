@@ -13,6 +13,8 @@
  * 宝物1/2/3 の行はこの形態（treasure=true）にのみ付くので、そのまま実装している。
  */
 (window.SPECIALS = window.SPECIALS || {})[146] = {
+  /* バーストの攻撃力・会心ダメージはここで実装している */
+  suppress: { burst: [0] },
   init: function (u, E) {
     u.miranda = {
       burstFrame: -1,
