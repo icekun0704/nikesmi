@@ -31,7 +31,7 @@ const Ts = new Map([[0, 60], [1, 60], [2, 58], [3, 58], [4, 58], [5, 56], [6, 56
 function Jt(frames, chargeSpeedPercent = 0) {
   if (!frames) return frames;
   const a = Math.round(Number(chargeSpeedPercent) || 0);
-  if (a <= 0) return frames;
+  if (a === 0) return frames;   /* 負の値はチャージが遅くなる（そのまま計算する） */
   if (frames === 60 && a <= 25 && Ts.has(a)) return Ts.get(a);
   // 100%を超えると間隔が負になるので、そこは下限で止める
   const pct = Math.min(a, 100);

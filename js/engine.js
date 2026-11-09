@@ -84,9 +84,11 @@ window.Engine = (function () {
       u.debuffImmuneLeft -= 1;
       return null;
     }
+    var ident = opts.slotKey || key;
     var found = null;
     for (var i = 0; i < u.buffs.length; i++) {
-      if (u.buffs[i].key === key && u.buffs[i].stat === stat) { found = u.buffs[i]; break; }
+      var bkey = u.buffs[i].slotKey || u.buffs[i].key;
+      if (bkey === ident && u.buffs[i].stat === stat) { found = u.buffs[i]; break; }
     }
     if (found) {
       found.value = Math.max(found.value, value);
@@ -98,7 +100,7 @@ window.Engine = (function () {
       return found;
     }
     var b = {
-      key: key, stat: stat, value: value, dir: dir, until: until,
+      key: key, slotKey: ident, stat: stat, value: value, dir: dir, until: until,
       stacks: 1, maxStacks: opts.maxStacks || 1,
       aura: !!opts.aura, refreshed: u.now, label: opts.label
     };
@@ -471,6 +473,7 @@ window.Engine = (function () {
 
   function applyEffect(u, effect, targets, team, enemies, frame, ctx) {
     var keyBase = ctx.key + ':' + effect.op + ':' + effect.stat;
+    var slotBase = (ctx.slotKey || ctx.key) + ':' + effect.op + ':' + effect.stat;
     var sf = ctx.scaleFactor == null ? 1 : ctx.scaleFactor;
     effect = Object.assign({}, effect);
     if (sf !== 1 && effect.value != null && effect.op !== 'gaugeCharge') {
@@ -507,15 +510,17 @@ window.Engine = (function () {
             var basis = stat === 'atkPct' ? atkEff(u)
               : stat === 'defPct' ? defEff(u)
               : u.hpMaxBase;
-            buff(t, keyBase + ':' + t.pos, flatKey, basis * value / 100, effect.dir, until, {});
+            buff(t, keyBase + ':' + t.pos, flatKey, basis * value / 100, effect.dir, until,
+              { slotKey: slotBase + ':' + t.pos });
             continue;
           }
           if (effect.dir === 'down' && (stat === 'atkPct' || stat === 'defPct' || stat === 'maxHpPct')) {
-            buff(t, keyBase + ':' + t.pos, stat, value, 'down', until, {});
+            buff(t, keyBase + ':' + t.pos, stat, value, 'down', until,
+              { slotKey: slotBase + ':' + t.pos });
             continue;
           }
           buff(t, keyBase + ':' + t.pos, stat, value, effect.dir || 'up', until,
-            { maxStacks: effect.stacks || 1 });
+            { maxStacks: effect.stacks || 1, slotKey: slotBase + ':' + t.pos });
         }
         return;
       }
@@ -527,7 +532,8 @@ window.Engine = (function () {
         else amount = effect.value;
         var fkey = effect.stat === 'atk' ? 'atkFlat' : effect.stat === 'def' ? 'defFlat' : 'hpFlat';
         for (var fj = 0; fj < targets.length; fj++) {
-          buff(targets[fj], keyBase + ':' + targets[fj].pos, fkey, amount, effect.dir || 'up', until, {});
+          buff(targets[fj], keyBase + ':' + targets[fj].pos, fkey, amount, effect.dir || 'up', until,
+            { slotKey: slotBase + ':' + targets[fj].pos });
         }
         return;
       }
@@ -674,7 +680,8 @@ window.Engine = (function () {
     for (var i = 0; i < b.effects.length; i++) {
       applyEffect(u, b.effects[i], targets, team, enemies, frame,
         Object.assign({
-          key: u.side + u.pos + ':' + state.slot + ':' + state.blocks.indexOf(blockState),
+          key: u.side + u.pos + ':undefined:' + state.blocks.indexOf(blockState),
+          slotKey: u.side + u.pos + ':' + state.slot + ':' + state.blocks.indexOf(blockState),
           scaleFactor: (u.skillScale && u.skillScale[state.slot]) || 1
         }, ctx));
     }
