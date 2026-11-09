@@ -391,6 +391,12 @@ def _parse_effect(text, treasure):
             out['value'] = float(mv.group(1))
         if md:
             out['duration'] = float(md.group(1))
+        mc = re.search(r'フルチャージダメージ[：:]\s*' + NUM + r'%', line)
+        if mc:
+            out['chargeMult'] = float(mc.group(1)) / 100
+        mt = re.search(r'チャージ時間[：:]\s*' + NUM + r'秒', line)
+        if mt:
+            out['chargeTime'] = float(mt.group(1))
         return out
     if 'スキルN強制使用' in line or '強制使用' in line:
         return {'op': 'forceSkill', 'raw': line}

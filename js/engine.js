@@ -671,6 +671,17 @@ window.Engine = (function () {
         for (var wc = 0; wc < targets.length; wc++) {
           targets[wc].weaponDmgOverride = effect.value;
           targets[wc].weaponDmgUntil = frame + Math.round(wdur * FPS);
+          if (effect.chargeMult != null) {
+            targets[wc].chargeMultOverride = effect.chargeMult;
+            targets[wc].chargeMultUntil = frame + Math.round(wdur * FPS);
+          }
+          if (effect.chargeTime != null) {
+            if (targets[wc].chargeFixedPrev == null) {
+              targets[wc].chargeFixedPrev = targets[wc].chargeFixed || 0;
+            }
+            targets[wc].chargeFixed = Math.round(effect.chargeTime * FPS);
+            targets[wc].chargeFixedUntil = frame + Math.round(wdur * FPS);
+          }
         }
         return;
       }
@@ -1294,8 +1305,13 @@ window.Engine = (function () {
             var weaponMult = (u.weaponDmgOverride != null && frame <= u.weaponDmgUntil)
               ? u.weaponDmgOverride
               : ((u.char.stats && u.char.stats.weaponDamage) || 10);
-            var chargeMult = (u.weapon === 'RL' || u.weapon === 'SR')
-              ? ((u.char.stats && u.char.stats.maxCharge) || 250) / 100 : null;
+            var chargeMult;
+            if (u.chargeMultOverride != null && frame <= u.chargeMultUntil) {
+              chargeMult = u.chargeMultOverride;
+            } else {
+              chargeMult = (u.weapon === 'RL' || u.weapon === 'SR')
+                ? ((u.char.stats && u.char.stats.maxCharge) || 250) / 100 : null;
+            }
 
             var damagedThisShot = [];
             function noteHit(t) { if (t && damagedThisShot.indexOf(t) < 0) damagedThisShot.push(t); }
@@ -1465,6 +1481,11 @@ window.Engine = (function () {
           if (u.shield > 0 && u.shieldUntil != null && u.shieldUntil !== Infinity && frame > u.shieldUntil) {
             u.shield = 0;
             u.shieldUntil = 0;
+          }
+          if (u.chargeFixedUntil && frame > u.chargeFixedUntil) {
+            u.chargeFixed = u.chargeFixedPrev || 0;
+            u.chargeFixedUntil = 0;
+            u.chargeFixedPrev = null;
           }
           if (u.stackBonus > 0 && u.stackBonusUntil != null &&
               u.stackBonusUntil !== Infinity && frame > u.stackBonusUntil) {
