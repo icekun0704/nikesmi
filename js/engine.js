@@ -708,7 +708,20 @@ window.Engine = (function () {
       case 'gaugeCharge': ctx.gaugeCharge(u.side, effect.value); return;
       case 'burstCd': u.burstReadyAt = Math.max(0, u.burstReadyAt - effect.value * FPS); return;
       case 'hpDrain': u.hp = Math.max(1, u.hp - u.hpMax * effect.value / 100); return;
-      case 'debuffClear': for (var dc = 0; dc < targets.length; dc++) targets[dc].buffs = targets[dc].buffs.filter(function (b) { return b.value >= 0 && b.dir !== 'down'; }); return;
+      case 'debuffClear': {
+        var maxClear = effect.count == null ? Infinity : effect.count;
+        for (var dc = 0; dc < targets.length; dc++) {
+          var dt = targets[dc];
+          var cleared = 0;
+          dt.buffs = dt.buffs.filter(function (b) {
+            var bad = b.dir === 'down' || b.value < 0;
+            if (!bad) return true;
+            if (cleared < maxClear) { cleared += 1; return false; }
+            return true;
+          });
+        }
+        return;
+      }
       default: return;
     }
   }
