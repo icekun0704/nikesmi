@@ -1232,31 +1232,31 @@
     return { start: start, end: start + visible, max: maxT };
   }
 
-  function coverAt(unit, frame) {
-    var s = unit.hpSeries || [[0, unit.hp, unit.coverHp]];
-    if (frame <= s[0][0]) return s[0][2] || 0;
-    for (var i = 1; i < s.length; i++) {
-      if (s[i][0] >= frame) {
-        var a = s[i - 1], b = s[i];
-        var t = (frame - a[0]) / Math.max(1, b[0] - a[0]);
-        var av = a[2] == null ? 0 : a[2], bv = b[2] == null ? 0 : b[2];
-        return av + (bv - av) * t;
-      }
+  /* hpSeries は [フレーム, HP, 遮蔽物] の並び。
+   * グラフは毎フレーム何百回も引くので、線形探索ではなく二分探索で挟む。 */
+  function seriesAt(s, frame, idx) {
+    var n = s.length;
+    if (!n) return 0;
+    var last = s[n - 1][idx];
+    if (frame <= s[0][0]) return s[0][idx] || 0;
+    if (frame >= s[n - 1][0]) return last || 0;
+    var lo = 0, hi = n - 1;
+    while (hi - lo > 1) {
+      var mid = (lo + hi) >> 1;
+      if (s[mid][0] >= frame) hi = mid; else lo = mid;
     }
-    return s[s.length - 1][2] || 0;
+    var a = s[lo], b = s[hi];
+    var t = (frame - a[0]) / Math.max(1, b[0] - a[0]);
+    var av = a[idx] || 0, bv = b[idx] || 0;
+    return av + (bv - av) * t;
+  }
+
+  function coverAt(unit, frame) {
+    return seriesAt(unit.hpSeries || [[0, unit.hpMax, unit.coverHp || 0]], frame, 2);
   }
 
   function hpAt(unit, frame) {
-    var s = unit.hpSeries || [[0, unit.hpMax]];
-    if (frame <= s[0][0]) return s[0][1];
-    for (var i = 1; i < s.length; i++) {
-      if (s[i][0] >= frame) {
-        var a = s[i - 1], b = s[i];
-        var t = (frame - a[0]) / Math.max(1, b[0] - a[0]);
-        return a[1] + (b[1] - a[1]) * t;
-      }
-    }
-    return s[s.length - 1][1];
+    return seriesAt(unit.hpSeries || [[0, unit.hpMax]], frame, 1);
   }
 
   /* タイムラインの配色。css/style.css の変数と揃える。 */
@@ -1697,23 +1697,40 @@
     }, { passive: false });
 
     var dragging = false;
+    var scrubRaf = null;
+    var scrubRect = null;
+
     canvas.addEventListener('pointerdown', function (ev) {
       dragging = true;
-      canvas.setPointerCapture(ev.pointerId);
+      /* 位置はドラッグ開始時に一度だけ測る。毎回測ると再レイアウトを強制して重い。 */
+      scrubRect = canvas.getBoundingClientRect();
+      try { canvas.setPointerCapture(ev.pointerId); } catch (e) { /* 取れなくても続行 */ }
       scrubTo(ev);
     });
     canvas.addEventListener('pointermove', function (ev) { if (dragging) scrubTo(ev); });
-    canvas.addEventListener('pointerup', function () { dragging = false; });
+    canvas.addEventListener('pointerup', function () { dragging = false; scrubRect = null; });
+    canvas.addEventListener('pointercancel', function () { dragging = false; scrubRect = null; });
 
+    /* ドラッグ中は毎イベント描くと重い。位置だけ更新して、描画は1フレーム1回。
+     * 盤面は作り直さない（時間で変わるのはHPバーだけ）。 */
     function scrubTo(ev) {
       if (!store.sample) return;
-      var rect = canvas.getBoundingClientRect();
+      var rect = scrubRect || canvas.getBoundingClientRect();
       var rel = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
       var win = timeWindow();
       store.frame = Math.round(win.start + (win.end - win.start) * rel);
-      store.playing = false;
-      $('#playBtn').textContent = '▶';
-      drawTimeline(); renderBoard('A'); renderBoard('B'); updateReadout();
+      if (store.playing) {
+        store.playing = false;
+        $('#playBtn').textContent = '▶';
+      }
+      if (scrubRaf) return;
+      scrubRaf = requestAnimationFrame(function () {
+        scrubRaf = null;
+        drawTimeline();
+        updateHpBars('A');
+        updateHpBars('B');
+        updateReadout();
+      });
     }
   }
 
