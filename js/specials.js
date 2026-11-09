@@ -5139,7 +5139,8 @@ window.SPECIALS = window.SPECIALS || {};
 
   (window.SPECIALS = window.SPECIALS || {})[169] = {
     /* 1365.92% を10回順番に撃つ処理はここで実装している */
-    suppress: { burst: [0] },
+    /* 美しさのスタックはここで実装している */
+  suppress: { burst: [0], skill2: [2] },
     init: function (u, E) {
       st(u).decoy = true;   // 戦闘開始時のデコイ
     },
@@ -12153,7 +12154,7 @@ function powerBloodStacks(u) {
 
   (window.SPECIALS = window.SPECIALS || {})[52] = {
     /* スキル2の2秒ごとの手榴弾はここで実装しているので、パーサ側は止める */
-    suppress: { skill2: [0] },
+    suppress: { skill1: [0], skill2: [0] },
 
     init: function (u, E) {
       u.ada = {
