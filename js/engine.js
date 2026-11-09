@@ -419,7 +419,7 @@ window.Engine = (function () {
         { rng: opts.rng, scale: opts.scale, teamA: opts.teamA, teamB: opts.teamB }, 'lethalHit');
     }
     return applyDamage(target, dmg, attacker, frame,
-      Object.assign({ piercesCover: (!!opts.isBurst && !!opts.aoe) || !!opts.ignoreDef }, opts));
+      Object.assign({ piercesCover: !!opts.isBurst && !!opts.aoe }, opts));
   }
 
   function heal(u, amount, frame) {
