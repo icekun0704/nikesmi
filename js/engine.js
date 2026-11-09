@@ -346,6 +346,16 @@ window.Engine = (function () {
 
     var remaining = amount;
 
+    // デコイ: 分身は独立した的なので、遮蔽物より先に受ける
+    if (!ctx.piercesCover && target.decoyHp > 0 &&
+        frame <= (target.decoyUntil == null ? Infinity : target.decoyUntil)) {
+      var takenByDecoy = Math.min(target.decoyHp, remaining);
+      target.decoyHp -= takenByDecoy;
+      remaining -= takenByDecoy;
+      if (source) source.damageDealt += takenByDecoy;
+      if (remaining <= 0) return takenByDecoy;
+    }
+
     // 遮蔽物: 範囲バーストは貫通し、単体攻撃はまず遮蔽物が受ける
     var absorbedByCover = 0;
     if (!ctx.piercesCover && target.coverHp > 0) {
@@ -356,14 +366,6 @@ window.Engine = (function () {
       target.coverDamage = (target.coverDamage || 0) + eaten;
       if (source) source.damageDealt += eaten;
       if (remaining <= 0) return eaten;
-    }
-
-    // デコイ: 単体攻撃はまず分身が受ける
-    if (!ctx.piercesCover && target.decoyHp > 0 && frame <= (target.decoyUntil == null ? Infinity : target.decoyUntil)) {
-      var takenByDecoy = Math.min(target.decoyHp, remaining);
-      target.decoyHp -= takenByDecoy;
-      remaining -= takenByDecoy;
-      if (remaining <= 0) return takenByDecoy;
     }
 
     if (target.shield > 0) {
