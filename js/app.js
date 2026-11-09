@@ -493,7 +493,7 @@
     store.teams[fromSide][fromIndex] = target || null;
     store.selected = { side: toSide, index: toIndex };
     persist();
-    renderAll();
+    renderAllLight();
     scheduleSim();
   }
 
@@ -518,7 +518,7 @@
     var next = firstEmpty(side);
     store.selected = { side: side, index: next >= 0 ? next : index };
     persist();
-    renderAll();
+    renderAllLight();
     scheduleSim();
   }
 
@@ -1442,6 +1442,29 @@
     renderBoard('A'); renderBoard('B');
     renderRoster();
     updateReadout();
+  }
+
+  /* 編成が変わっただけのときは、名簿を作り直さずクラスだけ付け替える。
+   * 223枚のDOMを作り直すのが重いので、スマホでの引っかかりを減らす。 */
+  function renderAllLight() {
+    renderBoard('A'); renderBoard('B');
+    updateRosterState();
+    updateReadout();
+  }
+
+  function updateRosterState() {
+    var cards = document.querySelectorAll('#roster .card');
+    if (!cards.length) { renderRoster(); return; }
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      var id = parseInt(card.dataset.charId, 10);
+      var where = inTeam(id);
+      card.classList.toggle('inA', where === 'A');
+      card.classList.toggle('inB', where === 'B');
+      var used = card.querySelector('.used');
+      if (where && !used) card.appendChild(el('div', 'used'));
+      else if (!where && used && used.parentNode) used.parentNode.removeChild(used);
+    }
   }
 
   function setupFilters() {
