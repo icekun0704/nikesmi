@@ -56,6 +56,19 @@ window.Engine = (function () {
   }
 
   /* ------------------------------------------------------------ buff/stat */
+  /* 被ダメージ群。「◯◯コードの敵から」の条件つきは、その属性の攻撃のときだけ効かせる */
+  function takenFactor(target, attacker) {
+    var total = 0, now = target.now;
+    for (var i = 0; i < target.buffs.length; i++) {
+      var b = target.buffs[i];
+      if (b.stat !== 'takenDmgPct') continue;
+      if (b.until < now) continue;
+      if (b.onlyElement && b.onlyElement !== attacker.element) continue;
+      total += (b.dir === 'down' ? -b.value : b.value) * (b.stacks || 1);
+    }
+    return 1 + total / 100;
+  }
+
   function sumStat(u, stat) {
     var total = 0, now = u.now;
     for (var i = 0; i < u.buffs.length; i++) {
@@ -103,6 +116,7 @@ window.Engine = (function () {
       key: key, slotKey: ident, stat: stat, value: value, dir: dir, until: until,
       stacks: 1, maxStacks: (opts.maxStacks || 1) + (u.stackBonus || 0),
       shotsLeft: opts.shots == null ? null : opts.shots,
+      onlyElement: opts.onlyElement || null,
       aura: !!opts.aura, refreshed: u.now, label: opts.label
     };
     u.buffs.push(b);
@@ -392,7 +406,7 @@ window.Engine = (function () {
     if (opts.ignoreDef) up += sumStat(attacker, 'ignoreDefDmgPct');
     if (opts.isDistributed) up += sumStat(attacker, 'distributedDmgPct');
 
-    var taken = 1 + sumStat(target, 'takenDmgPct') / 100;
+    var taken = takenFactor(target, attacker);
     if (taken < 0.05) taken = 0.05;
 
     var dmg = base * (opts.multiplierPct / 100) * bonus * element * charge * (1 + up / 100) * taken;
@@ -526,7 +540,8 @@ window.Engine = (function () {
             continue;
           }
           buff(t, keyBase + ':' + t.pos, stat, value, effect.dir || 'up', until,
-            { maxStacks: effect.stacks || 1, slotKey: slotBase + ':' + t.pos, shots: effect.shots });
+            { maxStacks: effect.stacks || 1, slotKey: slotBase + ':' + t.pos,
+              shots: effect.shots, onlyElement: effect.onlyElement });
         }
         return;
       }

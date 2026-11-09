@@ -261,6 +261,9 @@ def parse_effect(text, treasure):
                 eff['duration'] = float(dur.group(1))
             elif '：持続' in text or text.endswith('持続'):
                 eff['duration'] = None
+        me = re.search(r'([灼熱風圧鉄甲電撃水冷]+)コードの敵から受けるダメージ', text)
+        if me and 'onlyElement' not in eff:
+            eff['onlyElement'] = me.group(1)
         if 'maxTriggers' not in eff:
             lim = LIMIT_RE.search(text)
             if lim:
