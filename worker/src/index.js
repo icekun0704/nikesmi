@@ -218,7 +218,8 @@ async function fetchRoster(env, openid, cookieOverride) {
       const pick = (key) => Number(d[key] != null ? d[key] : c[key]) || 0;
       return {
         name_code: Number(c.name_code),
-        level: pick('lv'),
+        // レベルは一覧側の値を使う（詳細側の lv は常に 1 が返る）
+        level: Number(c.lv) || 0,
         limit_break: pick('grade'),
         core: pick('core'),
         affection: pick('attractive_lv'),

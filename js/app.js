@@ -86,12 +86,22 @@
     return MODE[store.mode].levelLocked ? 400 : (store.teamLevel[side || 'A'] || 400);
   }
 
+  /* レベルはキャラごとに違う。シンクロデバイスに入っているキャラは共通だが、
+   * 入っていないキャラは 1〜200 のまま。取り込み済みのレベルがあればそちらを使う。 */
+  function levelForEntry(entry, side) {
+    if (MODE[store.mode].levelLocked) return 400;
+    var cfg = entry && cfgOf(entry);
+    var own = cfg && cfg.stats && cfg.stats.level;
+    if (own > 0) return own;
+    return store.teamLevel[side || 'A'] || 400;
+  }
+
   function statsOf(entry, side) {
     var c = BY_ID[entry.charId];
     if (!c) return null;
     var cfg = cfgOf(entry) || {};
     var s = Object.assign({}, cfg.stats || {});
-    s.level = levelFor(side);
+    s.level = levelForEntry(entry, side);
     return window.Stats.compute(c, s);
   }
 
@@ -99,7 +109,7 @@
     var c = BY_ID[entry.charId];
     var cfg = cfgOf(entry) || {};
     var s = Object.assign({}, cfg.stats || {});
-    s.level = levelFor(side);
+    s.level = levelForEntry(entry, side);
     var st = window.Stats.compute(c, s);
     return window.Stats.combatPower(st, s, cfg.skillLevels || {});
   }
@@ -573,7 +583,7 @@
 
     var g1 = el('div', 'fieldset');
     g1.appendChild(el('h4', null, '育成'));
-    var lvField = numField('レベル', s.level == null ? 400 : s.level, 1, MAX_LEVEL, 1, function (v) {
+    var lvField = numField('レベル', levelForEntry(entry, editing.side), 1, MAX_LEVEL, 1, function (v) {
       s.level = mode.levelLocked ? 400 : v;
     });
     if (mode.levelLocked) {
@@ -581,8 +591,6 @@
       lvField.querySelector('input').value = 400;
       lvField.title = 'チャンピオンアリーナは全員Lv400固定です';
     }
-    lvField.querySelector('input').disabled = true;
-    lvField.querySelector('input').value = MODE[store.mode].levelLocked ? 400 : (store.teamLevel[editing.side] || 400);
     lvField.title = 'レベルはチーム共通です（編成バーの Lv）';
     g1.appendChild(lvField);
     g1.appendChild(selectField('限界突破', s.lb == null ? 3 : s.lb,
@@ -596,7 +604,7 @@
     grid.appendChild(g1);
 
     var g2 = el('div', 'fieldset');
-    g2.appendChild(el('h4', null, '装備・魔方・コレクション'));
+    g2.appendChild(el('h4', null, '装備・ハーモニーキューブ・コレクション'));
     g2.appendChild(selectField('装備強化', s.equipLevel == null ? 5 : s.equipLevel,
       [0, 1, 2, 3, 4, 5].map(function (v) { return { value: v, label: 'T10 +' + v }; }),
       function (v) { s.equipLevel = +v; }));
@@ -605,8 +613,8 @@
     });
     var cubeSel = s.cube || (s.cube = { id: 'none', level: 10 });
     if (typeof cubeSel === 'string') { s.cube = { id: cubeSel, level: s.cubeLevel || 10 }; cubeSel = s.cube; }
-    g2.appendChild(selectField('魔方', cubeSel.id, cubeOpts, function (v) { cubeSel.id = v; }));
-    g2.appendChild(numField('魔方 Lv', cubeSel.level == null ? 10 : cubeSel.level, 0, 15, 1, function (v) {
+    g2.appendChild(selectField('ハーモニーキューブ', cubeSel.id, cubeOpts, function (v) { cubeSel.id = v; }));
+    g2.appendChild(numField('ハーモニーキューブ Lv', cubeSel.level == null ? 10 : cubeSel.level, 0, 15, 1, function (v) {
       cubeSel.level = v; s.cubeLevel = v;
     }));
     var coll = s.collectible || { rarity: 'SR', level: 10 };
@@ -700,8 +708,7 @@
         var cfg = cfgOf(e) || {};
         var skills = cfg.skillLevels || {};
         var st = Object.assign({}, cfg.stats || {});
-        var lv = MODE[store.mode].levelLocked ? 400 : (store.teamLevel[side] || 400);
-        st.level = lv;
+        st.level = levelForEntry(e, side);
         units[side + '|' + i] = {
           stats: st,
           cube: (cfg.stats && cfg.stats.cube) || null,

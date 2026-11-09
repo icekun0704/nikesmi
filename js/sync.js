@@ -268,7 +268,7 @@ window.Sync = (function () {
     return byCode;
   }
 
-  /* 調和の魔方のティッドは 10003XX で、下2桁が種類 */
+  /* ハーモニーキューブのティッドは 10003XX で、下2桁が種類 */
   function cubeTypeOf(entry) {
     var tid = Number(entry.cubeTid) || 0;
     if (!tid) return null;

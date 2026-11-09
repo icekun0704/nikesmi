@@ -189,6 +189,9 @@ window.Engine = (function () {
       skillKey: String(char.orgId) + (char.treasure ? '*' : ''),
       skills: null,
       skillState: [],
+      pierces: !!char.hasPenetration,
+      pierceUntil: -1,
+      pierceShotsLeft: 0,
       cfg: cfg
     };
     u.firing = Gauge.createFiring(char, pos, u.fireSide, {
@@ -196,7 +199,7 @@ window.Engine = (function () {
       quantumCube: cfg.quantumCube,
       superstarSupplement: o.superstarSupplement || 0
     });
-    // 調和の魔方の固有効果（レベルで3段階）
+    // ハーモニーキューブの固有効果（レベルで3段階）
     if (window.CubeUtil && cfg.cube) {
       var cu = window.CubeUtil;
       var cstat = cu.byId(cfg.cube.id);
@@ -547,6 +550,15 @@ window.Engine = (function () {
         for (var s = 0; s < targets.length; s++) {
           var sv = u.hpMax * effect.value / 100;
           targets[s].shield = Math.max(targets[s].shield, sv);
+        }
+        return;
+      }
+      case 'pierceSpecial': {
+        for (var pi = 0; pi < targets.length; pi++) {
+          var tg = targets[pi];
+          if (effect.shots) tg.pierceShotsLeft = (tg.pierceShotsLeft || 0) + effect.shots;
+          else if (effect.duration != null) tg.pierceUntil = frame + Math.round(effect.duration * FPS);
+          else tg.pierces = true;
         }
         return;
       }
@@ -1083,16 +1095,17 @@ window.Engine = (function () {
                 });
               }
             } else {
-              /* 貫通特化: 対象の後ろにいる敵にも同じ1発が当たる。
-               * widePierceTargetCount はデータにある分だけ使う（推測で広げない）。 */
-              var pierceN = u.char.widePierceTargetCount || 1;
+              /* 貫通: 弾が敵を突き抜ける。対象より後ろの敵すべてに当たる。
+               * 「何体まで」という上限は無い。 */
+              var pierces = u.pierces || u.pierceUntil > frame || u.pierceShotsLeft > 0;
+              if (u.pierceShotsLeft > 0) u.pierceShotsLeft -= 1;
               var hitList = [primary];
-              if (pierceN > 1 && u.char.hasPenetration) {
+              if (pierces) {
                 var ordered = alive(enemies).slice().sort(function (a, b) { return a.pos - b.pos; });
                 var at = ordered.indexOf(primary);
                 if (at >= 0) {
                   var dir = prefersRight(u) ? -1 : 1;
-                  for (var k = 1; k < pierceN; k++) {
+                  for (var k = 1; k < ordered.length; k++) {
                     var nx = ordered[at + k * dir];
                     if (!nx) break;
                     hitList.push(nx);
