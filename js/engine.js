@@ -674,7 +674,7 @@ window.Engine = (function () {
     for (var i = 0; i < b.effects.length; i++) {
       applyEffect(u, b.effects[i], targets, team, enemies, frame,
         Object.assign({
-          key: u.side + u.pos + ':' + sk.slot + ':' + state.blocks.indexOf(blockState),
+          key: u.side + u.pos + ':' + state.slot + ':' + state.blocks.indexOf(blockState),
           scaleFactor: (u.skillScale && u.skillScale[state.slot]) || 1
         }, ctx));
     }
@@ -1114,6 +1114,11 @@ window.Engine = (function () {
           u.magazineEff = Math.round(u.firing.magazine * (1 + sumStat(u, 'magazinePct') / 100) + sumStat(u, 'magazineFlat'));
           if (isFinite(u.firing.magazine) && u.magazineEff > 0) u.firing.magazine = u.magazineEff;
 
+          // チャージ速度のバフを射撃間隔に反映する
+          // レッドフードはゲージ側がスタックを自前で数えているので、二重に足さない
+          if (u.firing.baseChargeSpeed != null && u.id !== 111) {
+            u.firing.character.chargeSpeedPercent = u.firing.baseChargeSpeed + sumStat(u, 'chargeSpeedPct');
+          }
           var shot = Gauge.fireFiring(u.firing, frame);
           // チャージ時間固定（スノーホワイト：HA / リバーレリオ など）
           if (u.chargeFixed) u.firing.nextFrame = frame + u.chargeFixed;

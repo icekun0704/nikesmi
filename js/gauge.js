@@ -33,7 +33,9 @@ function Jt(frames, chargeSpeedPercent = 0) {
   const a = Math.round(Number(chargeSpeedPercent) || 0);
   if (a <= 0) return frames;
   if (frames === 60 && a <= 25 && Ts.has(a)) return Ts.get(a);
-  return Math.floor(frames / 2 * (1 - a / 100)) * 2; // rounded down to an even frame
+  // 100%を超えると間隔が負になるので、そこは下限で止める
+  const pct = Math.min(a, 100);
+  return Math.max(2, Math.floor(frames / 2 * (1 - pct / 100)) * 2);
 }
 
 // charge frames + the non-charge part of the cycle (turn / release)
@@ -479,7 +481,11 @@ function liftBaseNext(m, frame) {
     const gap = Math.max(0, (m.baseIntervalFrames || m.interval) - cf);
     return frame + la(cf, gap, (Number(c.chargeSpeedPercent) || 0) + Cs);
   }
-  return frame + m.interval;
+  /* ふつうの武器: チャージ速度は戦闘中に変わるので、その都度引き直す */
+  const cf0 = m.baseChargeFrames || m.chargeFrames || 0;
+  if (!cf0) return frame + m.interval;
+  const gap0 = Math.max(0, (m.baseIntervalFrames || m.interval) - cf0);
+  return frame + la(cf0, gap0, Number(c.chargeSpeedPercent) || 0);
 }
 
 function liftAfterShot(m, frame, hits) {
@@ -520,6 +526,7 @@ function createFiring(char, pos, side, o) {
     baseIntervalFrames: j.baseIntervalFrames != null ? j.baseIntervalFrames : j.interval,
     projectileFlightFrames: j.projectileFlightFrames || 0,
     chargeValue: Zn(c), hits: 0, shotsInMagazine: 0, redHoodChargeSpeedStacks: 0,
+    baseChargeSpeed: c.chargeSpeedPercent,
     mgWarmupIndex: c.weapon === 'MG' ? 0 : null,
     totalCharge: 0, shots: 0, reloadingUntil: -1,
     magazine: (c.weapon === 'RL' || c.weapon === 'SR')
