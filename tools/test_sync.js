@@ -29,8 +29,12 @@ if (!path) {
 }
 var R = JSON.parse(fs.readFileSync(path, 'utf8'));
 
-/* Worker が返すのと同じ形に組み替える */
-var payload = {
+/* Worker の応答そのものなら、そのまま使う */
+var payload;
+if (Array.isArray(R.characters)) {
+  payload = R;
+} else {
+payload = {
   ok: true,
   version: 3,
   area_id: 81,
@@ -64,6 +68,7 @@ var payload = {
     };
   })
 };
+}
 
 var norm = window.Sync.normalise(payload);
 if (!norm) { console.error('normalise に失敗'); process.exit(1); }

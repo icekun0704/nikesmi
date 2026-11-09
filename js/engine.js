@@ -197,7 +197,8 @@ window.Engine = (function () {
     u.firing = Gauge.createFiring(char, pos, u.fireSide, {
       chargeSpeedPercent: cfg.chargeSpeed,
       quantumCube: cfg.quantumCube,
-      superstarSupplement: o.superstarSupplement || 0
+      superstarSupplement: o.superstarSupplement || 0,
+      arenaMode: o.arenaMode || 'normal'
     });
     // ハーモニーキューブの固有効果（レベルで3段階）
     if (window.CubeUtil && cfg.cube) {

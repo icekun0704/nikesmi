@@ -28,6 +28,8 @@ C.forEach(c => {
 
 const corpus = process.argv[2] || 'c10';
 const limit = parseInt(process.argv[3] || '600', 10);
+const arenaMode = process.argv[5] || 'normal';
+const reverseB = process.argv[6] === 'rev';
 const trials = parseInt(process.argv[4] || '5', 10);
 
 const file = path.join(__dirname, '..', '..', 'work', 'matchups_' + corpus + '.json');
@@ -65,14 +67,14 @@ const t0 = Date.now();
 
 for (const m of cases.slice(0, limit)) {
   const A = build(m.attacker_team, m.attacker_collections);
-  const B = build(m.defender_team, m.defender_collections);
+  const B = build(reverseB ? m.defender_team.slice().reverse() : m.defender_team, m.defender_collections);
   if (A.some(x => !x) || B.some(x => !x)) {
     skipped++;
     if (skipped < 4) console.log('skip: unknown id', m.attacker_team, m.defender_team);
     continue;
   }
 
-  const r = window.Engine.runMany(A, B, {}, trials);
+  const r = window.Engine.runMany(A, B, { arenaMode: arenaMode }, trials);
   if (r.error) {
     skipped++;
     if (skipped < 4) console.log('skip:', r.error);

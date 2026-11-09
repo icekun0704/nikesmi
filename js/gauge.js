@@ -125,12 +125,13 @@ function zc(c) {
   if (Number.isFinite(c.projectileFlightBaseFrames)) return c.projectileFlightBaseFrames;
   return (c.timing && c.timing.projectileFlightFramesByPosition && c.timing.projectileFlightFramesByPosition.P1) || 16;
 }
-function jo(c, pos, side) { // projectile flight frames
+function jo(c, pos, side, arenaMode) { // projectile flight frames
+  const mode = arenaMode || 'normal';
   if ((c.timing && c.timing.projectileFlightFramesByPosition) || Number.isFinite(c.projectileFlightBaseFrames)) {
-    return Math.max(0, zc(c) - qc(pos, side, 'normal'));
+    return Math.max(0, zc(c) - qc(pos, side, mode));
   }
   if (Number.isFinite(c.projectileFlightFrames)) return c.projectileFlightFrames;
-  return Math.max(0, zc(c) - qc(pos, side, 'normal'));
+  return Math.max(0, zc(c) - qc(pos, side, mode));
 }
 function Bd(c) { // attack release frames
   const n = Number(c.attackReleaseFrames != null ? c.attackReleaseFrames : (c.timing && c.timing.attackReleaseFrames));
@@ -140,7 +141,7 @@ function canApplyChargeSpeed(c) { // Vi(): only RL/SR, not Pascal / Snow White:H
   return (c.weapon === 'RL' || c.weapon === 'SR') && !P.isPascal(c) && !P.isSnowWhiteHA(c);
 }
 
-function buildSchedule(c, pos, side) {
+function buildSchedule(c, pos, side, arenaMode) {
   const n = canApplyChargeSpeed(c) ? (Number(c.chargeSpeedPercent) || 0) : 0;
   const r = Bd(c);
   const t = c.timing || {};
@@ -159,7 +160,7 @@ function buildSchedule(c, pos, side) {
         Number.isFinite(c.projectileFlightFrames) || Number.isFinite(c.projectileFlightBaseFrames));
 
     if (hasFlight) {
-      const b = jo(c, pos, side);
+      const b = jo(c, pos, side, arenaMode);
       const first = c.firstFrameOverride != null ? c.firstFrameOverride : d + r + b;
       if (P.isVestiTU(c)) {
         // guided burst: one charge then kn = 0/22/44/66 frames of follow-up shots
@@ -207,7 +208,7 @@ function buildSchedule(c, pos, side) {
     return { firstFrame: c.firstFrameOverride != null ? c.firstFrameOverride : Jt(base, n) + r, interval: la(base, gap, n), chargeFrames: s, baseChargeFrames: base, baseIntervalFrames: base + gap, attackReleaseFrames: r };
   }
   if (c.weapon === 'RL') {
-    const b = jo(c, pos, side);
+    const b = jo(c, pos, side, arenaMode);
     const turn = c.turnFrames != null ? c.turnFrames : 16;
     const base = o != null ? o : 60;
     return { firstFrame: c.firstFrameOverride != null ? c.firstFrameOverride : Jt(base, n) + r + b, interval: c.attackIntervalFrames || la(base, turn + r, n), chargeFrames: s, baseChargeFrames: base, baseIntervalFrames: base + turn + r, projectileFlightFrames: b, attackReleaseFrames: r };
@@ -295,7 +296,7 @@ function simulate(team, opts = {}) {
       superstarChargeSupplementValue: superstarSupp,
       hasPenetration: P.isRedHood(raw) ? false : raw.hasPenetration,
     });
-    const j = buildSchedule(c, pos, side);
+    const j = buildSchedule(c, pos, side, opts.arenaMode);
     members.push({
       character: c, positionIndex: pos,
       nextFrame: j.firstFrame,
@@ -509,7 +510,7 @@ function createFiring(char, pos, side, o) {
     superstarChargeSupplementValue: Number(o.superstarSupplement) || 0,
     hasPenetration: P.isRedHood(char) ? false : char.hasPenetration,
   });
-  const j = buildSchedule(c, pos, side);
+  const j = buildSchedule(c, pos, side, o.arenaMode);
   return {
     character: c, positionIndex: pos, side,
     nextFrame: j.firstFrame, interval: j.interval,

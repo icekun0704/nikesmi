@@ -37,6 +37,18 @@ const T2 = team(['リター', 'ノア', '紅蓮', 'アニス：スター', 'ノ�
 
 show('mirror (should be ~50/50)', T1, T2, 40);
 
+/* 競技モード: チャンピオンアリーナは両者同じ隊列なので、飛翔補正は 'c'（P1-P3=0, P4-P5=2）。
+   'normal' は攻撃側/防御側で補正が変わり、ミラー対戦が非対称になる。 */
+const flyTeam = team(['ヤン', 'ノイズ', 'ジャッカル', 'ティア', 'ラプンツェル']);
+const gNorm = window.Gauge.simulate(flyTeam, { side: 'defense', region: 'cn', arenaMode: 'normal' });
+const gChamp = window.Gauge.simulate(flyTeam, { side: 'defense', region: 'cn', arenaMode: 'c' });
+const gAtk = window.Gauge.simulate(flyTeam, { side: 'attack', region: 'cn', arenaMode: 'c' });
+show('mirror champion-mode (should be ~50/50)', T1, T2, 200);
+console.log(
+  '[OK] アリーナモード 通常/チャンピオン B1 ' + gNorm.burst1Frame + '/' + gChamp.burst1Frame +
+  'F  チャンピオン攻撃/防御 B1 ' + gAtk.burst1Frame + '/' + gChamp.burst1Frame + 'F'
+);
+
 const jackal = team(['ジャッカル', 'ノイズ', 'ドレイク', 'ブラン', 'ルピー']);
 const meta = team(['リター', 'ノア', '紅蓮', 'アニス：スター', 'ノワール']);
 show('jackal vs meta', jackal, meta, 40);
