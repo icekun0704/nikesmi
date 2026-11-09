@@ -162,8 +162,8 @@ button,select,input{font-family:inherit;font-size:inherit;color:inherit}
   font-family:var(--font-ui);font-size:17px;color:var(--fg-3);
 }
 .slot .txt{display:flex;flex-direction:column;gap:3px;min-width:0;padding-right:12px}
-.slot .nm{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
-.slot .meta{display:flex;align-items:center;gap:5px;font-family:var(--font-ui);font-size:9.5px;color:var(--fg-3)}
+.slot .nm{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.slot .meta{display:flex;align-items:center;gap:5px;font-family:var(--font-ui);font-size:10.5px;color:var(--fg-3)}
 .slot .bst{
   font-family:var(--font-ui);font-size:9px;font-weight:800;padding:0 4px;border-radius:4px;
   background:var(--surface-3);color:var(--fg-2);
@@ -281,8 +281,8 @@ button,select,input{font-family:inherit;font-size:inherit;color:inherit}
   background:linear-gradient(135deg,var(--violet),#a78bfa);color:#fff;letter-spacing:.04em;
 }
 .card .plate{padding:0 8px 8px;display:flex;flex-direction:column;gap:2px;min-width:0;margin-top:-22px;position:relative;z-index:1}
-.card .nm{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
-.card .sub{display:flex;align-items:center;gap:5px;font-family:var(--font-num);font-size:9.5px;color:var(--fg-3);white-space:nowrap;overflow:hidden}
+.card .nm{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.card .sub{display:flex;align-items:center;gap:5px;font-family:var(--font-num);font-size:10.5px;color:var(--fg-3);white-space:nowrap;overflow:hidden}
 .card .tagcls{font-family:var(--font-ui);font-size:8px;padding:1px 4px;border-radius:4px;background:var(--surface-3);color:var(--fg-2)}
 .card .tagcls.火力{background:rgba(255,107,74,.2);color:#ffab94}
 .card .tagcls.防御{background:rgba(74,168,255,.2);color:#9bcaff}
