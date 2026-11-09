@@ -19,7 +19,8 @@
  */
 (window.SPECIALS = window.SPECIALS || {})[35] = {
   /* 持続ダメージの刻みはエンジン側で行う */
-  suppress: {'skill2': [3], 'burst': [0, 1]},
+  suppressOps: { burst: { 0: ['damage'] } },
+  suppress: {'skill2': [3], 'burst': [1]},
   init: function (u, E) {
     u.diesel = {
       form: null,          /* 'intro' | 'climax' */

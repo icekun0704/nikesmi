@@ -14,7 +14,7 @@
  */
 (window.SPECIALS = window.SPECIALS || {})[45] = {
   /* 遮蔽物のHP増減はここで実装している */
-  suppress: { skill2: [0, 1] },
+  suppressOps: { skill2: { 0: ['coverStat'], 1: ['coverStat'] } },
   init: function (u, E) {
     u.tia = {
       coverBuff: null,     /* { amount, until } */

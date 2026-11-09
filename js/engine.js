@@ -268,6 +268,16 @@ window.Engine = (function () {
     }
     // 固有スキル側で実装しているブロックは、パーサ側の発動を止める
     var sp = (window.SPECIALS || {})[char.id];
+    if (sp && sp.suppressOps) {
+      Object.keys(sp.suppressOps).forEach(function (slot) {
+        var st3 = u.skillState.filter(function (x) { return x.slot === slot; })[0];
+        if (!st3) return;
+        Object.keys(sp.suppressOps[slot]).forEach(function (idx) {
+          var bs3 = st3.blocks[Number(idx)];
+          if (bs3) bs3.dropOps = sp.suppressOps[slot][idx];
+        });
+      });
+    }
     if (sp && sp.suppress) {
       Object.keys(sp.suppress).forEach(function (slot) {
         var state = u.skillState.filter(function (x) { return x.slot === slot; })[0];
@@ -766,6 +776,7 @@ window.Engine = (function () {
     var targets = resolveTargets(u, b.target, team, enemies, ctx.rng, frame);
     if (!targets.length && b.target.side !== 'self') return;
     for (var i = 0; i < b.effects.length; i++) {
+      if (blockState.dropOps && blockState.dropOps.indexOf(b.effects[i].op) >= 0) continue;
       applyEffect(u, b.effects[i], targets, team, enemies, frame,
         Object.assign({
           key: u.side + u.pos + ':undefined:' + state.blocks.indexOf(blockState),
