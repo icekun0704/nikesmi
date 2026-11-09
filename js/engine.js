@@ -1277,6 +1277,7 @@ window.Engine = (function () {
           if (shot.reloaded) runTriggered(u, team, enemies, frame, ctx, 'lastBullet');
           if (u.weapon === 'RL' || u.weapon === 'SR') {
             u.counters.fullCharge += 1;
+            runCounterSkills(u, team, enemies, frame, ctx, 'fullCharge');
             runEventSkills(u, team, enemies, frame, ctx, 'fullChargeShot');
           }
           u.counters.pelletHits += (u.weapon === 'SG' ? 10 : 1);
