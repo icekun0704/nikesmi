@@ -59,6 +59,11 @@ if (mapped2.problems.length) {
 const corpus = process.argv[2] || 'c10';
 const limit = parseInt(process.argv[3] || '600', 10);
 const arenaMode = process.argv[5] || 'normal';
+/* 遮蔽物HPは engine の暫定値（window.COVER_HP_RATIO、既定1.0）。--cover= で振れる。 */
+{
+  const a = process.argv.find(x => x.indexOf('--cover=') === 0);
+  if (a) window.COVER_HP_RATIO = parseFloat(a.split('=')[1]);
+}
 const reverseB = process.argv[6] === 'rev';
 const trials = parseInt(process.argv[4] || '5', 10);
 
