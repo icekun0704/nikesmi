@@ -52,6 +52,21 @@ Object.keys(DB).forEach(function (key) {
           eff.every(function (e) { return e.op === 'damage'; })) {
         report('dead-damage-block', key + ' ' + slot + '#' + i + ' ' + b.raw);
       }
+      /* 4b. 数値であるべきトリガー項目が数値か（文字列だと毎フレーム発動などの事故になる） */
+      ['seconds', 'n', 'pct', 'stage', 'chance'].forEach(function (k) {
+        if (t[k] != null && typeof t[k] !== 'number') {
+          report('non-numeric-trigger', key + ' ' + slot + '#' + i + ' ' + k + '=' + JSON.stringify(t[k]));
+        }
+      });
+      /* 4c. 効果の数値も数値であること */
+      (b.effects || []).forEach(function (e) {
+        ['value', 'duration', 'ticks', 'interval'].forEach(function (k) {
+          if (e[k] != null && typeof e[k] !== 'number') {
+            report('non-numeric-effect', key + ' ' + slot + '#' + i + ' ' + k + '=' + JSON.stringify(e[k]));
+          }
+        });
+      });
+
       /* 5. 回数指定だけ残って本体が常時のブロック（回数が無視される） */
       if (t.nth && t.kind === 'always') {
         report('nth-without-trigger', key + ' ' + slot + '#' + i + ' ' + b.raw);
