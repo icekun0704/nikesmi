@@ -727,6 +727,16 @@ window.Engine = (function () {
     blockState.fired += 1;
   }
 
+  /* 「戦闘中1回発動」などの回数制限 */
+  function limitReached(bs) {
+    var effs = bs.block.effects || [];
+    for (var i = 0; i < effs.length; i++) {
+      var m = effs[i].maxTriggers;
+      if (m != null && bs.fired >= m) return true;
+    }
+    return false;
+  }
+
   function skillConditionsMet(u, b, frame) {
     var conds = b.trigger.conditions || [];
     for (var i = 0; i < conds.length; i++) {
@@ -753,6 +763,7 @@ window.Engine = (function () {
       for (var b = 0; b < sk.blocks.length; b++) {
         var bs = sk.blocks[b];
         if (bs.skip) continue;
+        if (limitReached(bs)) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== 'always' && trig.kind !== 'battleStart') continue;
         if (!skillConditionsMet(u, bs.block, frame)) continue;
@@ -781,6 +792,7 @@ window.Engine = (function () {
       for (var b = 0; b < sk.blocks.length; b++) {
         var bs = sk.blocks[b];
         if (bs.skip) continue;
+        if (limitReached(bs)) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== 'periodic') continue;
         var secs = Number(trig.seconds);
@@ -827,6 +839,7 @@ window.Engine = (function () {
       for (var b = 0; b < sk.blocks.length; b++) {
         var bs = sk.blocks[b];
         if (bs.skip) continue;
+        if (limitReached(bs)) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== kind) continue;
         if (!stageMatches(trig, stage, false)) continue;
@@ -847,6 +860,7 @@ window.Engine = (function () {
       for (var b = 0; b < sk.blocks.length; b++) {
         var bs = sk.blocks[b];
         if (bs.skip) continue;
+        if (limitReached(bs)) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== 'counter' || trig.on !== on) continue;
         var n = trig.n || 1;
@@ -870,6 +884,7 @@ window.Engine = (function () {
       for (var b = 0; b < sk.blocks.length; b++) {
         var bs = sk.blocks[b];
         if (bs.skip) continue;
+        if (limitReached(bs)) continue;
         var trig = bs.block.trigger || {};
         if (trig.kind !== kind) continue;
         if (!stageMatches(trig, stage, isSelf === undefined ? true : isSelf)) continue;
