@@ -1388,25 +1388,19 @@
     });
   }
 
-  /* 中央線を挟んで、自チームは上・相手は下に伸びる「蝶」型。
-   * 2本の曲線の距離が、そのまま優勢差になる。 */
+  /* 残りHPの推移。0〜100%の縦軸に2本の線を引き、右端に名前と現在値を出す。
+   * 折りたたみ時は高さが小さいので、塗りは薄く・線は太めにする。 */
   function drawTeamCurves(g, xOf, x0, y0, w, h, win) {
     var s = store.sample;
-    var mid = y0 + h / 2;
-    var half = Math.max(6, h / 2 - 4);
+    var top = y0 + 2, bot = y0 + h - 2;
+    var ih = Math.max(10, bot - top);
 
     g.strokeStyle = 'rgba(255,255,255,.055)';
     g.lineWidth = 1;
-    [0.25, 0.75].forEach(function (v) {
-      var y = Math.round(y0 + h * v) + .5;
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (v) {
+      var y = Math.round(top + ih * (1 - v)) + .5;
       g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + w, y); g.stroke();
     });
-
-    g.strokeStyle = 'rgba(255,255,255,.16)';
-    g.beginPath();
-    g.moveTo(x0, Math.round(mid) + .5);
-    g.lineTo(x0 + w, Math.round(mid) + .5);
-    g.stroke();
 
     g.save();
     g.beginPath();
@@ -1425,35 +1419,41 @@
           max += team[i].hpMax;
         }
         var r = max ? total / max : 0;
-        pts.push([xOf(f), side === 'A' ? mid - half * r : mid + half * r]);
+        pts.push([xOf(f), top + ih * (1 - r), r]);
       }
 
       g.beginPath();
-      g.moveTo(pts[0][0], mid);
+      g.moveTo(pts[0][0], bot);
       pts.forEach(function (p) { g.lineTo(p[0], p[1]); });
-      g.lineTo(pts[pts.length - 1][0], mid);
+      g.lineTo(pts[pts.length - 1][0], bot);
       g.closePath();
-      var grad = g.createLinearGradient(0, mid, 0, side === 'A' ? mid - half : mid + half);
-      grad.addColorStop(0, color + '05');
-      grad.addColorStop(1, color + '33');
+      var grad = g.createLinearGradient(0, top, 0, bot);
+      grad.addColorStop(0, color + '26');
+      grad.addColorStop(1, color + '03');
       g.fillStyle = grad;
       g.fill();
 
       g.beginPath();
       pts.forEach(function (p, i) { if (i === 0) g.moveTo(p[0], p[1]); else g.lineTo(p[0], p[1]); });
       g.strokeStyle = color;
-      g.lineWidth = 1.6;
+      g.lineWidth = 2;
       g.stroke();
 
       var cur = pts.filter(function (p) { return p[0] <= xOf(store.frame); }).pop() || pts[0];
-      var ratio = Math.abs(cur[1] - mid) / half;
       g.fillStyle = color;
-      g.font = '700 11px "Chakra Petch", system-ui, sans-serif';
-      g.textAlign = side === 'A' ? 'left' : 'right';
-      g.fillText((side === 'A' ? '自チーム ' : '相手チーム ') + Math.round(ratio * 100) + '%',
-        side === 'A' ? x0 + 4 : x0 + w - 4, side === 'A' ? y0 + 11 : y0 + h - 4);
+      g.font = '700 10px "Bahnschrift", system-ui, sans-serif';
+      g.textAlign = 'right';
+      var ly = Math.max(top + 9, Math.min(bot - 3, cur[1] + (side === 'A' ? -6 : 13)));
+      g.fillText((side === 'A' ? '自チーム ' : '相手チーム ') + Math.round(cur[2] * 100) + '%',
+        x0 + w - 4, ly);
     });
     g.restore();
+
+    g.fillStyle = PAL.text;
+    g.font = '9px "Bahnschrift", system-ui, sans-serif';
+    g.textAlign = 'left';
+    g.fillText('100%', x0 + 3, top + 8);
+    g.fillText('0%', x0 + 3, bot - 2);
   }
 
   function drawBurstTicks(g, xOf, x0, y, w) {
