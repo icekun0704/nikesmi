@@ -314,12 +314,16 @@
     $('#count').textContent = list.length + '体';
 
     if (!list.length) {
+      if (rosterObserver) { rosterObserver.disconnect(); rosterObserver = null; }
+      rosterQueue = []; rosterHost = null;
       host.appendChild(el('div', 'roster-empty', '条件に合うキャラがいません'));
       return;
     }
 
-    var frag = document.createDocumentFragment();
-    list.forEach(function (c) {
+    /* 223枚を一度に作るとスマホで重い。60枚ずつ、スクロールに応じて足す。 */
+    rosterQueue = list.slice();
+    rosterHost = host;
+    function makeRosterCard(c) {
       var card = el('div', 'card');
       card.dataset.charId = String(c.id);
       card.draggable = true;
@@ -388,9 +392,54 @@
         placeChar(c.id);
       });
 
-      frag.appendChild(card);
-    });
-    host.appendChild(frag);
+      return card;
+    }
+
+    rosterMakeCard = makeRosterCard;
+    if (!host.dataset.moreBound) {
+      host.dataset.moreBound = '1';
+      host.addEventListener('scroll', maybeAppendMore, { passive: true });
+      window.addEventListener('scroll', maybeAppendMore, { passive: true });
+    }
+    appendRosterChunk();
+  }
+
+  /* IntersectionObserver が発火しない環境（非表示タブなど）でも止まらないよう、
+   * スクロール時にも番人の位置を見る。 */
+  function maybeAppendMore() {
+    if (!rosterQueue.length || !rosterHost) return;
+    var m = rosterHost.querySelector('.roster-more');
+    if (!m) return;
+    var r = m.getBoundingClientRect();
+    var vh = window.innerHeight || 0;
+    if (r.top < vh + 600) appendRosterChunk();
+  }
+
+  var ROSTER_CHUNK = 60;
+  var rosterQueue = [], rosterHost = null, rosterObserver = null, rosterMakeCard = null;
+
+  function appendRosterChunk() {
+    if (!rosterHost) return;
+    if (rosterObserver) { rosterObserver.disconnect(); rosterObserver = null; }
+    var sentinel = rosterHost.querySelector('.roster-more');
+    if (sentinel && sentinel.parentNode) sentinel.parentNode.removeChild(sentinel);
+    var frag = document.createDocumentFragment();
+    var n = 0;
+    while (rosterQueue.length && n < ROSTER_CHUNK) {
+      frag.appendChild(rosterMakeCard(rosterQueue.shift()));
+      n += 1;
+    }
+    rosterHost.appendChild(frag);
+    if (!rosterQueue.length) return;
+    var more = el('div', 'roster-more');
+    rosterHost.appendChild(more);
+    if (!('IntersectionObserver' in window)) { appendRosterChunk(); return; }
+    rosterObserver = new IntersectionObserver(function (entries) {
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].isIntersecting) { appendRosterChunk(); return; }
+      }
+    }, { rootMargin: '600px 0px' });
+    rosterObserver.observe(more);
   }
 
   /* ------------------------------------------------------------------ board */
@@ -404,9 +453,17 @@
       var fill = slot.querySelector('.hpfill');
       if (!fill) continue;
       var u = store.sample.teams[side][i];
-      if (!u) { fill.style.width = '0%'; continue; }
+      if (!u) { fill.style.transform = 'scaleX(0)'; continue; }
       var pct = Math.max(0, Math.min(1, hpAt(u, store.frame) / u.hpMax));
-      fill.style.width = (pct * 100) + '%';
+      /* width ではなく transform。毎フレームのレイアウトを避ける。 */
+      fill.style.transform = 'scaleX(' + pct + ')';
+      var ghost = slot.querySelector('.hpghost');
+      if (ghost) ghost.style.transform = 'scaleX(' + pct + ')';
+      var cov = slot.querySelector('.covfill');
+      if (cov) {
+        var c = u.coverMax ? Math.max(0, Math.min(1, coverAt(u, store.frame) / u.coverMax)) : 0;
+        cov.style.transform = 'scaleX(' + c + ')';
+      }
     }
   }
 
@@ -541,12 +598,28 @@
       if (store.sample) {
         var u = store.sample.teams[side][index];
         if (u) {
-          var wrap = el('div', 'hpwrap');
-          var fill = el('span', 'hpfill');
+          /* 遮蔽物（上段・細い）と HP（下段・太い）。
+           * HP は残像つきで、減った分が一瞬だけ明るく残る。 */
+          var wrap = el('div', 'vitals');
+          var covWrap = el('div', 'cov');
+          var covFill = el('i', 'covfill');
+          covWrap.appendChild(covFill);
+          wrap.appendChild(covWrap);
+
+          var hpWrap = el('div', 'hp');
+          var ghost = el('i', 'hpghost');
+          var fill = el('i', 'hpfill');
+          hpWrap.appendChild(ghost);
+          hpWrap.appendChild(fill);
+          wrap.appendChild(hpWrap);
+
           var hp = hpAt(u, store.frame);
           var pct = Math.max(0, Math.min(1, hp / u.hpMax));
-          fill.style.width = (pct * 100) + '%';
-          wrap.appendChild(fill);
+          var cov = coverAt(u, store.frame);
+          var cpct = u.coverMax ? Math.max(0, Math.min(1, cov / u.coverMax)) : 0;
+          fill.style.transform = 'scaleX(' + pct + ')';
+          ghost.style.transform = 'scaleX(' + pct + ')';
+          covFill.style.transform = 'scaleX(' + cpct + ')';
           slot.appendChild(wrap);
         }
       }
@@ -956,50 +1029,50 @@
   /* -------------------------------------------------------------- verdict */
   function renderVerdict(overrideText) {
     var v = $('#verdict');
-    var facts = $('#facts');
-    facts.innerHTML = '';
     v.className = 'verdict';
 
-    if (overrideText) { v.classList.add('idle'); v.textContent = overrideText; return; }
-    if (!store.result) {
+    if (overrideText) {
       v.classList.add('idle');
-      v.textContent = '編成を組みましょう';
+      v.innerHTML = '';
+      v.appendChild(el('span', 'vl', '—'));
+      v.appendChild(el('span', 'vm', overrideText));
       return;
     }
+    if (!store.result) {
+      v.classList.add('idle');
+      v.innerHTML = '';
+      v.appendChild(el('span', 'vl', 'STANDBY'));
+      v.appendChild(el('span', 'vm', '編成を組むと 5 対 5 を試算します'));
+      return;
+    }
+
     var r = store.result;
     var pct = Math.round(r.winRate * 100);
-    var label = pct >= 55 ? 'WIN' : pct <= 45 ? 'LOSE' : 'EVEN';
-    var shown = pct >= 55 ? pct : pct <= 45 ? 100 - pct : pct;
-    v.classList.add(pct >= 55 ? 'win' : pct <= 45 ? 'lose' : 'even');
+    var win = pct >= 50;
+    v.classList.add(win ? 'win' : 'lose');
     v.innerHTML = '';
-    v.appendChild(el('span', 'vl', label));
-    var num = el('span', 'vn', String(shown));
-    v.appendChild(num);
-    v.appendChild(el('span', 'vu', '%'));
-    /* 勝率バー（自チームから見た割合） */
+
+    v.appendChild(el('span', 'vl', win ? 'WIN' : 'LOSE'));
+
+    var stats = el('div', 'vstats');
+    function f(k, val) {
+      var d = el('div', 'vf');
+      d.appendChild(el('span', 'vk', k));
+      d.appendChild(el('span', 'vv', String(val)));
+      stats.appendChild(d);
+    }
+    f('勝率', pct + '%');
+    if (r.sample) f('残存', r.sample.survivors.A + ' — ' + r.sample.survivors.B);
+    f('決着', (r.medianFrames / 60).toFixed(1) + '秒');
+    var first = r.sample ? r.sample.bursts.filter(function (b) { return b.stage === 'B3'; })[0] : null;
+    if (first) f('初回FB', (first.frame / 60).toFixed(2) + '秒');
+    v.appendChild(stats);
+
     var bar = el('span', 'vbar');
     var fill = el('span', 'vfill');
     fill.style.width = pct + '%';
     bar.appendChild(fill);
     v.appendChild(bar);
-
-    function fact(k, val, small) {
-      var f = el('div', 'fact');
-      f.appendChild(el('div', 'k', k));
-      var vv = el('div', 'v', String(val));
-      if (small) vv.appendChild(el('small', null, small));
-      f.appendChild(vv);
-      facts.appendChild(f);
-    }
-    fact('勝率', pct + '%', ' ' + r.trials + '回試行');
-    fact('決着', (r.medianFrames / 60).toFixed(1), ' 秒');
-    fact('残存', r.sample ? r.sample.survivors.A + ' — ' + r.sample.survivors.B : '—');
-    var first = r.sample ? r.sample.bursts.filter(function (b) { return b.stage === 'B3'; })[0] : null;
-    fact('初回フルバースト', first ? (first.frame / 60).toFixed(2) : '—',
-      first ? ' 秒 ' + (first.side === 'A' ? '自' : '相') : '');
-    var killer = r.sample ? r.sample.events.filter(function (e) { return e.kind === 'death'; })[0] : null;
-    fact('初回撃破', killer ? (killer.frame / 60).toFixed(1) : '—', killer ? ' 秒 ' + killer.unit : '');
-
   }
 
   /* 過去の大会記録から推定した「その編成が勝ちやすいか」.
@@ -1090,6 +1163,20 @@
     death: '#ff5d76',
     plate: '#0a0c10'
   };
+
+  /* 遮蔽物の残り。hpSeries は [フレーム, HP, 遮蔽物] の3つ組。 */
+  function coverAt(unit, frame) {
+    var s = unit.hpSeries || [[0, unit.hpMax, unit.coverMax || 0]];
+    if (frame <= s[0][0]) return s[0][2] || 0;
+    for (var i = 1; i < s.length; i++) {
+      if (s[i][0] >= frame) {
+        var a = s[i - 1], b = s[i];
+        var t = (frame - a[0]) / Math.max(1, b[0] - a[0]);
+        return (a[2] || 0) + ((b[2] || 0) - (a[2] || 0)) * t;
+      }
+    }
+    return s[s.length - 1][2] || 0;
+  }
 
   function drawTimeline() {
     if (!canvas) return;
@@ -1211,16 +1298,25 @@
     });
   }
 
+  /* 中央線を挟んで、自チームは上・相手は下に伸びる「蝶」型。
+   * 2本の曲線の距離が、そのまま優勢差になる。 */
   function drawTeamCurves(g, xOf, x0, y0, w, h, win) {
     var s = store.sample;
+    var mid = y0 + h / 2;
+    var half = Math.max(6, h / 2 - 4);
 
-    // horizontal guides
-    g.strokeStyle = 'rgba(255,255,255,.045)';
+    g.strokeStyle = 'rgba(255,255,255,.055)';
     g.lineWidth = 1;
-    [0.25, 0.5, 0.75].forEach(function (v) {
-      var y = y0 + h * (1 - v);
+    [0.25, 0.75].forEach(function (v) {
+      var y = Math.round(y0 + h * v) + .5;
       g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + w, y); g.stroke();
     });
+
+    g.strokeStyle = 'rgba(255,255,255,.16)';
+    g.beginPath();
+    g.moveTo(x0, Math.round(mid) + .5);
+    g.lineTo(x0 + w, Math.round(mid) + .5);
+    g.stroke();
 
     g.save();
     g.beginPath();
@@ -1238,37 +1334,34 @@
           total += Math.max(0, hpAt(team[i], f));
           max += team[i].hpMax;
         }
-        pts.push([xOf(f), y0 + h * (1 - (max ? total / max : 0))]);
+        var r = max ? total / max : 0;
+        pts.push([xOf(f), side === 'A' ? mid - half * r : mid + half * r]);
       }
 
-      // fill
       g.beginPath();
-      g.moveTo(pts[0][0], y0 + h);
+      g.moveTo(pts[0][0], mid);
       pts.forEach(function (p) { g.lineTo(p[0], p[1]); });
-      g.lineTo(pts[pts.length - 1][0], y0 + h);
+      g.lineTo(pts[pts.length - 1][0], mid);
       g.closePath();
-      var grad = g.createLinearGradient(0, y0, 0, y0 + h);
-      grad.addColorStop(0, color + '2e');
-      grad.addColorStop(1, color + '02');
+      var grad = g.createLinearGradient(0, mid, 0, side === 'A' ? mid - half : mid + half);
+      grad.addColorStop(0, color + '05');
+      grad.addColorStop(1, color + '33');
       g.fillStyle = grad;
       g.fill();
 
-      // stroke
       g.beginPath();
       pts.forEach(function (p, i) { if (i === 0) g.moveTo(p[0], p[1]); else g.lineTo(p[0], p[1]); });
       g.strokeStyle = color;
-      g.lineWidth = 2;
+      g.lineWidth = 1.6;
       g.stroke();
 
-      // current value at the playhead
       var cur = pts.filter(function (p) { return p[0] <= xOf(store.frame); }).pop() || pts[0];
+      var ratio = Math.abs(cur[1] - mid) / half;
       g.fillStyle = color;
-      g.font = '600 11px "Inter", system-ui, sans-serif';
-      g.textAlign = 'left';
-      var ratio = 1 - (cur[1] - y0) / h;
+      g.font = '700 11px "Chakra Petch", system-ui, sans-serif';
       g.textAlign = side === 'A' ? 'left' : 'right';
       g.fillText((side === 'A' ? '自 ' : '相 ') + Math.round(ratio * 100) + '%',
-        side === 'A' ? x0 + 4 : x0 + w - 4, y0 + 13);
+        side === 'A' ? x0 + 4 : x0 + w - 4, side === 'A' ? y0 + 11 : y0 + h - 4);
     });
     g.restore();
   }
