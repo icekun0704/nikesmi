@@ -101,7 +101,7 @@ window.Engine = (function () {
     }
     var b = {
       key: key, slotKey: ident, stat: stat, value: value, dir: dir, until: until,
-      stacks: 1, maxStacks: opts.maxStacks || 1,
+      stacks: 1, maxStacks: (opts.maxStacks || 1) + (u.stackBonus || 0),
       aura: !!opts.aura, refreshed: u.now, label: opts.label
     };
     u.buffs.push(b);
@@ -175,6 +175,8 @@ window.Engine = (function () {
       stunUntil: -1,
       shieldUntil: 0,
       infiniteMagUntil: -1,
+      stackBonus: 0,
+      stackBonusUntil: 0,
       shareGroup: null,
       lifestealPct: 0,
       lifestealUntil: 0,
@@ -623,6 +625,14 @@ window.Engine = (function () {
           if (!targets[fi].fbBonusFrames || Math.abs(delta) > Math.abs(targets[fi].fbBonusFrames)) {
             targets[fi].fbBonusFrames = Math.round(delta * FPS);
           }
+        }
+        return;
+      }
+      case 'stackBoost': {
+        /* スタック可能バフの上限を +1 */
+        for (var sb = 0; sb < targets.length; sb++) {
+          targets[sb].stackBonus = (targets[sb].stackBonus || 0) + 1;
+          targets[sb].stackBonusUntil = until;
         }
         return;
       }
@@ -1353,6 +1363,11 @@ window.Engine = (function () {
           if (u.shield > 0 && u.shieldUntil != null && u.shieldUntil !== Infinity && frame > u.shieldUntil) {
             u.shield = 0;
             u.shieldUntil = 0;
+          }
+          if (u.stackBonus > 0 && u.stackBonusUntil != null &&
+              u.stackBonusUntil !== Infinity && frame > u.stackBonusUntil) {
+            u.stackBonus = 0;
+            u.stackBonusUntil = 0;
           }
           if (u.lifestealPct > 0 && u.lifestealUntil != null &&
               u.lifestealUntil !== Infinity && frame > u.lifestealUntil) {
