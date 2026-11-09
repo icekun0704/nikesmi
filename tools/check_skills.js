@@ -21,6 +21,12 @@ var TRIGGERS = {
   attack: 1, lethalHit: 1, never: 1, unknown: 1
 };
 
+/* エンジンが数えて、発動判定まで持っている回数カウンタ */
+var COUNTERS = {
+  attackShots: 1, attackHits: 1, pelletHits: 1, hitsTaken: 1,
+  fullCharge: 1, critHits: 1, ammoConsumed: 1
+};
+
 var problems = [];
 
 function report(kind, detail) {
@@ -52,6 +58,11 @@ Object.keys(DB).forEach(function (key) {
           eff.every(function (e) { return e.op === 'damage'; })) {
         report('dead-damage-block', key + ' ' + slot + '#' + i + ' ' + b.raw);
       }
+      /* 4a. 回数カウンタはエンジンが実際に判定しているものか */
+      if (t.kind === 'counter' && !COUNTERS[t.on]) {
+        report('unknown-counter', key + ' ' + slot + '#' + i + ' on=' + t.on);
+      }
+
       /* 4b. 数値であるべきトリガー項目が数値か（文字列だと毎フレーム発動などの事故になる） */
       ['seconds', 'n', 'pct', 'stage', 'chance'].forEach(function (k) {
         if (t[k] != null && typeof t[k] !== 'number') {
