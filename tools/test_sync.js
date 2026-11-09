@@ -98,8 +98,10 @@ ids.forEach(function (id) {
   var cfg = applied.chars[id];
   var c = window.CHARACTERS.filter(function (x) { return String(x.id) === id; })[0];
   if (!c) return;
-  var raw = R.list.filter(function (e) { return String(c.nameCode) === String(e.name_code); })[0];
-  if (!raw) return;
+  var raw = (payload.characters || []).filter(function (e) {
+    return String(c.nameCode) === String(e.name_code);
+  })[0];
+  if (!raw || !raw.combat) return;
   var st = window.Stats.compute(c, cfg.stats);
   var cp = window.Stats.combatPower(st, cfg.stats, cfg.skillLevels);
   rows.push(cp / raw.combat);
