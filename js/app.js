@@ -394,6 +394,22 @@
   }
 
   /* ------------------------------------------------------------------ board */
+  /* 再生中は毎フレーム renderBoard を呼ぶと、10スロット分のDOMを作り直すことになり
+   * スマホで重い。HPバーの幅だけを書き換える。 */
+  function updateHpBars(side) {
+    var host = document.querySelector('#slots' + side);
+    if (!host || !store.sample) return;
+    for (var i = 0; i < host.children.length; i++) {
+      var slot = host.children[i];
+      var fill = slot.querySelector('.hpfill');
+      if (!fill) continue;
+      var u = store.sample.teams[side][i];
+      if (!u) { fill.style.width = '0%'; continue; }
+      var pct = Math.max(0, Math.min(1, hpAt(u, store.frame) / u.hpMax));
+      fill.style.width = (pct * 100) + '%';
+    }
+  }
+
   function renderBoard(side) {
     var host = $('#slots' + side);
     host.innerHTML = '';
@@ -952,9 +968,20 @@
     }
     var r = store.result;
     var pct = Math.round(r.winRate * 100);
-    if (pct >= 55) { v.classList.add('win'); v.textContent = '勝ち ' + pct + '%'; }
-    else if (pct <= 45) { v.classList.add('lose'); v.textContent = '負け ' + (100 - pct) + '%'; }
-    else { v.classList.add('even'); v.textContent = '互角 ' + pct + '%'; }
+    var label = pct >= 55 ? 'WIN' : pct <= 45 ? 'LOSE' : 'EVEN';
+    var shown = pct >= 55 ? pct : pct <= 45 ? 100 - pct : pct;
+    v.classList.add(pct >= 55 ? 'win' : pct <= 45 ? 'lose' : 'even');
+    v.innerHTML = '';
+    v.appendChild(el('span', 'vl', label));
+    var num = el('span', 'vn', String(shown));
+    v.appendChild(num);
+    v.appendChild(el('span', 'vu', '%'));
+    /* 勝率バー（自チームから見た割合） */
+    var bar = el('span', 'vbar');
+    var fill = el('span', 'vfill');
+    fill.style.width = pct + '%';
+    bar.appendChild(fill);
+    v.appendChild(bar);
 
     function fact(k, val, small) {
       var f = el('div', 'fact');
@@ -1053,6 +1080,17 @@
     return s[s.length - 1][1];
   }
 
+  /* タイムラインの配色。css/style.css の変数と揃える。 */
+  var PAL = {
+    a: '#35e0b4', aSoft: '#bfeedd',
+    b: '#ff9a4d', bSoft: '#f8d9b6',
+    grid: 'rgba(255,255,255,.05)',
+    axis: '#5c6678',
+    text: '#6d788a',
+    death: '#ff5d76',
+    plate: '#0a0c10'
+  };
+
   function drawTimeline() {
     if (!canvas) return;
     var w = canvas.width / dpr, h = canvas.height / dpr;
@@ -1064,7 +1102,7 @@
     var plotW = w - padL - padR;
 
     if (!store.sample) {
-      g.fillStyle = '#6d788a';
+      g.fillStyle = PAL.text;
       g.font = '12px "Yu Gothic UI", system-ui, sans-serif';
       g.textAlign = 'center';
       g.fillText('編成を組むとタイムラインが表示されます', w / 2, h / 2);
@@ -1077,7 +1115,7 @@
 
     var stepSec = span / 60 > 25 ? 10 : span / 60 > 9 ? 5 : span / 60 > 3.5 ? 2 : 1;
     g.strokeStyle = 'rgba(255,255,255,.05)';
-    g.fillStyle = '#5c6678';
+    g.fillStyle = PAL.axis;
     g.font = '10px system-ui, sans-serif';
     g.textAlign = 'center';
     var startSec = Math.ceil(win.start / 60 / stepSec) * stepSec;
@@ -1147,7 +1185,7 @@
     var rowH = Math.max(6, (h - 4) / 2);
     ['A', 'B'].forEach(function (side, idx) {
       var series = s.gauge[side];
-      var color = side === 'A' ? '#3ddbb4' : '#f7a24c';
+      var color = side === 'A' ? PAL.a : PAL.b;
       var baseY = y0 + idx * (rowH + 4);
       g.fillStyle = 'rgba(255,255,255,.05)';
       g.fillRect(x0, baseY, w, rowH);
@@ -1191,7 +1229,7 @@
 
     ['A', 'B'].forEach(function (side) {
       var team = s.teams[side];
-      var color = side === 'A' ? '#3ddbb4' : '#f7a24c';
+      var color = side === 'A' ? PAL.a : PAL.b;
       var n = s.frames || 1;
       var pts = [];
       for (var f = 0; f <= n; f += 2) {
@@ -1240,7 +1278,7 @@
     s.bursts.forEach(function (b) {
       var x = xOf(b.frame);
       if (x < x0 || x > x0 + w) return;
-      var color = b.side === 'A' ? '#3ddbb4' : '#f7a24c';
+      var color = b.side === 'A' ? PAL.a : PAL.b;
       g.fillStyle = color;
       var tall = b.stage === 'B3' ? 7 : 4;
       g.fillRect(x - 1, y + (7 - tall), 2, tall);
@@ -1255,7 +1293,7 @@
       if (x < x0 || x > x0 + w) return;
       var team = s.teams[b.side];
       var u = team.filter(function (uu) { return uu.name === b.name; })[0];
-      var color = b.side === 'A' ? '#3ddbb4' : '#f7a24c';
+      var color = b.side === 'A' ? PAL.a : PAL.b;
       var y = y0 + (b.stage === 'B1' ? 2 : b.stage === 'B2' ? size + 3 : 0);
       if (b.stage === 'B3') y = y0 + 2;
       var img = u ? imageFor(u.char.id) : null;
@@ -1276,7 +1314,7 @@
       if (g.roundRect) g.roundRect(x - size / 2, y, size, size, 3); else g.rect(x - size / 2, y, size, size);
       g.stroke();
 
-      g.fillStyle = '#0a0c10';
+      g.fillStyle = PAL.plate;
       g.fillRect(x - 5, y + size - 8, 10, 8);
       g.fillStyle = color;
       g.font = 'bold 8px system-ui, sans-serif';
@@ -1305,7 +1343,7 @@
       var top = y0 + idx * laneH;
       var u = row.u;
       if (!u) return;
-      var color = row.side === 'A' ? '#3ddbb4' : '#f7a24c';
+      var color = row.side === 'A' ? PAL.a : PAL.b;
       var barH = Math.max(5, laneH * 0.52);
       var barY = top + (laneH - barH) / 2;
 
@@ -1323,7 +1361,7 @@
       }
 
       // 遮蔽物を上に細く重ねる（本体HPとは別枠）
-      var covColor = row.side === 'A' ? '#3ddbb4' : '#f7a24c';
+      var covColor = row.side === 'A' ? PAL.a : PAL.b;
       g.fillStyle = covColor + '3a';
       var lastC = bx;
       for (var cf = 0; cf <= n; cf += 2) {
@@ -1333,7 +1371,7 @@
         lastC = cx;
       }
 
-      g.fillStyle = row.side === 'A' ? '#bfeedd' : '#f8d9b6';
+      g.fillStyle = row.side === 'A' ? PAL.aSoft : PAL.bSoft;
       g.font = '10px "Yu Gothic UI", system-ui, sans-serif';
       g.textAlign = 'right';
       var label = u.name.length > 6 ? u.name.slice(0, 6) : u.name;
@@ -1347,7 +1385,7 @@
       if (u.deathFrame >= 0) {
         var dx = bx + (xOf(u.deathFrame) - x0) / w * bw;
         if (dx >= bx && dx <= bx + bw) {
-          g.strokeStyle = '#ff5d76'; g.lineWidth = 1.5;
+          g.strokeStyle = PAL.death; g.lineWidth = 1.5;
           g.beginPath(); g.moveTo(dx, barY - 1); g.lineTo(dx, barY + barH + 1); g.stroke();
         }
       }
@@ -1414,7 +1452,7 @@
       store.playing = false;
       $('#playBtn').textContent = '▶';
     }
-    drawTimeline(); updateReadout(); renderBoard('A'); renderBoard('B');
+    drawTimeline(); updateReadout(); updateHpBars('A'); updateHpBars('B');
     if (store.playing) playRaf = requestAnimationFrame(stepPlay);
   }
 
