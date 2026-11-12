@@ -25,7 +25,9 @@
 const fs = require('fs');
 const path = require('path');
 
-global.window = {};
+/* ブラウザと同じ設定で測る。これを読まないと COVER_HP_RATIO などが
+ * 既定値のままになり、本番と違う条件の数字が出る。 */
+require('./_env');
 require('../js/data.js');
 require('../js/stat_data.js');
 require('../js/skills.js');
